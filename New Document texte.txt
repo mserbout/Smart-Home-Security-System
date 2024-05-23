@@ -1,0 +1,58 @@
+import os
+import json
+import paho.mqtt.client as mqtt
+from google.cloud import bigquery
+
+# Google Cloud project and BigQuery dataset ID
+project_id = 'trans-market-419700'
+dataset_id = 'smart_home_security_system'  # replace with your dataset ID
+
+# Initialize BigQuery client
+bigquery_client = bigquery.Client(project=project_id)
+
+# MQTT configuration
+MQTT_HOSTNAME = '35.192.204.119'
+MQTT_PORT = 1883
+
+# Function to retrieve table names from BigQuery dataset
+def get_table_names():
+    tables = bigquery_client.list_tables(dataset_id)
+    return [table.table_id for table in tables]
+
+# Function to create MQTT topics and subscribe to them
+def create_topics_and_subscribe(client):
+    table_names = get_table_names()
+    for table_name in table_names:
+        topic = f"data/{table_name}"
+        client.subscribe(topic)
+        print(f"Subscribed to topic: {topic}")
+
+# Function to handle incoming messages
+def on_message(client, userdata, msg):
+    table_name = msg.topic.split('/')[-1]
+    print(f"Received message for table: {table_name}, payload: {msg.payload}")
+
+    # Insert message into BigQuery table
+    insert_into_bigquery(table_name, json.loads(msg.payload))
+
+# Function to insert data into BigQuery table
+def insert_into_bigquery(table_name, data):
+    table_ref = bigquery_client.dataset(dataset_id).table(table_name)
+    table = bigquery_client.get_table(table_ref)
+
+    errors = bigquery_client.insert_rows(table, [data])
+    if not errors:
+        print("Data inserted successfully into BigQuery")
+    else:
+        print(f"Errors occurred while inserting data into BigQuery: {errors}")
+
+# MQTT client setup
+client = mqtt.Client()
+client.on_message = on_message
+client.connect(MQTT_HOSTNAME, MQTT_PORT, 60)
+
+# Create topics and subscribe to them
+create_topics_and_subscribe(client)
+
+# Start the MQTT loop to listen for incoming messages
+client.loop_forever()

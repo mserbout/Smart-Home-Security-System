@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Houses{% endblock %}
+
+{% block content %}
+<h1>Manage Houses</h1>
+
+<form method="POST" action="{{ url_for('add_house') }}">
+    <input type="text" name="house_name" placeholder="Enter house name" required>
+    <button type="submit">Add House</button>
+</form>
+
+<h2>Existing Houses</h2>
+<ul>
+    {% for house in houses %}
+    <li>
+        {{ house }}
+        <form method="POST" action="{{ url_for('delete_house', house_name=house) }}" style="display:inline;">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+
+
+
+{% endblock %}

@@ -1,0 +1,97 @@
+/* Style the table */
+table {
+    max-height: 300px;
+    width: 40%;
+    overflow: auto;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Style table header */
+th {
+    background-color: #75d6c8;
+    height: 50px; /* Specify the height of the table header */
+    font-weight: bold;
+    color: #333;
+    text-align: left;
+}
+
+/* Style table rows */
+tr:nth-child(even) {
+    background-color: #f6f6f6;
+}
+
+/* Style table cells */
+td {
+    border: 1px solid #dddddd;
+    padding: 10px;
+    text-align: left;
+    color: #666;
+}
+
+/* Hover effect */
+tr:hover {
+    background-color: #eaeaea;
+}
+
+/* Scrollbar style */
+/* For WebKit/Blink */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* For Firefox */
+::-moz-scrollbar {
+    width: 10px;
+}
+
+::-moz-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-moz-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+}
+
+::-moz-scrollbar-thumb:hover {
+    background: #555;
+}
+
+
+.flashes {
+    list-style-type: none;
+    padding: 0;
+}
+
+.flashes li {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.flashes li.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.flashes li.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}

@@ -1,0 +1,52 @@
+
+MQTT_HOSTNAME='35.192.204.119'
+MQTT_PORT=1883
+
+import paho.mqtt.client as mqtt
+import json
+from google.cloud import bigquery
+
+bigquery_client = bigquery.Client()
+dataset_id = 'smart_home_security_system'  # replace with your dataset ID
+    # For this sample, the table must already exist and have a defined schema
+table_id = 'home1'  # replace with your table ID
+table_ref = bigquery_client.dataset(dataset_id).table(table_id)
+table = bigquery_client.get_table(table_ref)  # API request
+
+
+# The callback for when the client receives a CONNACK response from the server.
+def on_connect(client, userdata, flags, rc, properties):
+    print("Connected with result code "+str(rc))
+
+    # Subscribing in on_connect() means that if we lose the connection and
+    # reconnect then subscriptions will be renewed.
+
+    # Utilizad cada uno el topico con el que publique datos en el publicador
+    client.subscribe("home1/data")
+
+# The callback for when a PUBLISH message is received from the server.
+def on_message(client, userdata, msg):
+    print(msg.topic+" "+str(msg.payload))
+
+    print('Starting insertion')  
+    
+    response_dict=json.loads(msg.payload)
+    rows_to_insert = [ response_dict ]
+    
+    errors = bigquery_client.insert_rows(table, rows_to_insert)  # API request
+    print(errors)
+    print('Insertion finishes')
+
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client.on_connect = on_connect
+client.on_message = on_message
+
+#client.tls_set()
+client.connect(MQTT_HOSTNAME, MQTT_PORT, 60)
+
+# Blocking call that processes network traffic, dispatches callbacks and
+# handles reconnecting.
+# Other loop*() functions are available that give a threaded interface and a
+# manual interface.
+client.loop_forever()
+
