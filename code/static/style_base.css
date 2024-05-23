@@ -1,0 +1,68 @@
+/* Navbar Styles */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 80px;
+    background-color: #4d5f86;
+    padding-top: 20px;
+    color: white;
+    transition: width 0.3s;
+    z-index: 1000; /* Ensure navbar stays on top */
+}
+
+.navbar:hover {
+    width: 250px;
+}
+
+.navbar a {
+    display: block;
+    padding: 15px 20px;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.navbar a:hover {
+    background-color: #555;
+}
+
+/* Content Area Styles */
+.content {
+    margin-left: 80px;
+    padding: 20px;
+}
+
+/* Toggle Button Styles */
+.toggle-btn {
+    background-color: #333;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 10px;
+    position: fixed;
+    top: 20px;
+    left: 10px;
+    z-index: 1001; /* Ensure toggle button stays above navbar */
+    display: none; /* Hide by default on larger screens */
+}
+
+@media screen and (max-width: 768px) {
+    .navbar {
+        width: 250px;
+    }
+
+    .content {
+        margin-left: 250px;
+    }
+
+    .toggle-btn {
+        display: block; /* Show toggle button on smaller screens */
+    }
+}
