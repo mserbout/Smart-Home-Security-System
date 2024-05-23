@@ -5,46 +5,67 @@
 {% block content %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='home.css') }}">
 
-<p>Home</p>
+<h1>Welcome to Smart Home Security System</h1>
 
-<p>Home</p>
+
+
+
+<h1>Manage Houses</h1>
+
+<form method="POST" action="{{ url_for('add_house') }}">
+    <input type="text" name="house_name" placeholder="Enter house name" required>
+    <button type="submit">Add House</button>
+</form>
+
+<h2>Existing Houses</h2>
+<ul>
+    {% for house in houses %}
+    <li>
+        {{ house }}
+        <form method="POST" action="{{ url_for('delete_house', house_name=house) }}" style="display:inline;">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+
+
+
 <div>
     <label for="select-house">Select a House:</label>
-    <select id="select-house" name="house" onchange="location = this.value;">
+    <select id="select-house" name="house" onchange="location.href = '{{ url_for('home') }}?house_name=' + this.value;">
+
         <option value="" selected disabled>Choose a house...</option>
         {% for house in houses %}
-        <option value="{{ url_for('display_house', house_name=house) }}">{{ house }}</option>
+        <option value="{{ url_for('home') }}?house_name={{ house }}">{{ house }}</option>
         {% endfor %}
     </select>
 </div>
 
-
 <div>
-<table>
-    <tr>
-        <th>Time</th>
-        <th>Temperature</th>
-        <th>Humidity</th>
-        <th>Motion Detection</th>
-        <th>Longitude</th>
-        <th>Latitude</th>
-    </tr>
-    {% for row in measurements %}
-    <tr>
-        <td>{{ row.time }}</td>
-        <td>{{ row.temperature }}</td>
-        <td>{{ row.humidity }}</td>
-        <td>{{ row.motionDetection }}</td>
-        <td>{{ row.longitude }}</td>
-        <td>{{ row.latitude }}</td>
-    </tr>
-    {% endfor %}
-</table>
-
+    <table>
+        <tr>
+            <th>Time</th>
+            <th>Temperature</th>
+            <th>Humidity</th>
+            <th>Motion Detection</th>
+            <th>Longitude</th>
+            <th>Latitude</th>
+        </tr>
+        {% for row in measurements %}
+        <tr>
+            <td>{{ row.time }}</td>
+            <td>{{ row.temperature }}</td>
+            <td>{{ row.humidity }}</td>
+            <td>{{ row.motionDetection }}</td>
+            <td>{{ row.longitude }}</td>
+            <td>{{ row.latitude }}</td>
+        </tr>
+        {% endfor %}
+    </table>
 </div>
 
-<h1>Welcome to Smart Home Security System</h1>
-<a href="{{ url_for('list_houses') }}">Manage Houses</a>
 
 
 {% endblock %}

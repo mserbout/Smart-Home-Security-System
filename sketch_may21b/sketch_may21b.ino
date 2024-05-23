@@ -13,7 +13,7 @@ const char* password = "Lz0492&6";
 const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
-String topic_PUB = "data/ss";
+String topic_PUB = "data/Malaga";
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
