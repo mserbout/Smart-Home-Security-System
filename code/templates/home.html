@@ -7,9 +7,7 @@
 
 <h1>Welcome to Smart Home Security System</h1>
 
-
-
-
+{% if is_admin %}
 <h1>Manage Houses</h1>
 
 <form method="POST" action="{{ url_for('add_house') }}">
@@ -28,44 +26,46 @@
     </li>
     {% endfor %}
 </ul>
+{% endif %}
 
-
-
-
+{% if is_admin %}
 <div>
     <label for="select-house">Select a House:</label>
     <select id="select-house" name="house" onchange="location.href = '{{ url_for('home') }}?house_name=' + this.value;">
-
-        <option value="" selected disabled>Choose a house...</option>
+        <option value="">Select a house</option>
         {% for house in houses %}
-        <option value="{{ url_for('home') }}?house_name={{ house }}">{{ house }}</option>
+        <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
         {% endfor %}
     </select>
 </div>
+{% endif %}
 
-<div>
-    <table>
-        <tr>
-            <th>Time</th>
-            <th>Temperature</th>
-            <th>Humidity</th>
-            <th>Motion Detection</th>
-            <th>Longitude</th>
-            <th>Latitude</th>
-        </tr>
-        {% for row in measurements %}
-        <tr>
-            <td>{{ row.time }}</td>
-            <td>{{ row.temperature }}</td>
-            <td>{{ row.humidity }}</td>
-            <td>{{ row.motionDetection }}</td>
-            <td>{{ row.longitude }}</td>
-            <td>{{ row.latitude }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-</div>
+<h2>House Data</h2>
 
-
-
+{% if measurements %}
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Temperature</th>
+        <th>Humidity</th>
+        <th>Motion Detection</th>
+        <th>Longitude</th>
+        <th>Latitude</th>
+        <th>Time</th>
+    </tr>
+    {% for measurement in measurements %}
+    <tr>
+        <td>{{ measurement.id }}</td>
+        <td>{{ measurement.temperature }}</td>
+        <td>{{ measurement.humidity }}</td>
+        <td>{{ measurement.motionDetection }}</td>
+        <td>{{ measurement.longitude }}</td>
+        <td>{{ measurement.latitude }}</td>
+        <td>{{ measurement.time }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No data available for the selected house.</p>
+{% endif %}
 {% endblock %}

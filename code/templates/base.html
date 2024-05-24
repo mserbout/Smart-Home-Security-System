@@ -7,7 +7,6 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style_base.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- Font Awesome for icons -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style/home.css') }}">
-
 </head>
 <body>
     <div class="navbar" id="navbar">
@@ -15,6 +14,10 @@
         <a href="/">Home</a>
         <a href="/about">About</a>
         <a href="/contact">Contact</a>
+        {% if session.get('user_id') %}
+            <span>Welcome, {{ session.get('username') }}!</span>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        {% endif %}
     </div>
     <button class="toggle-btn" onclick="toggleNav()"><i class="fas fa-times"></i></button>
     <div class="content">
@@ -33,8 +36,6 @@
         {% endwith %}
     </div>
 
-
-
     <script>
         function toggleNav() {
             var navbar = document.getElementById("navbar");
@@ -50,6 +51,5 @@
             });
         });
     </script>
-
 </body>
 </html>

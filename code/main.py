@@ -1,6 +1,8 @@
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
+import uuid
+import bcrypt
 
 app = Flask(__name__)
 
@@ -39,7 +41,6 @@ def house_table_exists(house_name):
     except NotFound:
         return False
 
-
 # Function to delete a house (table) in BigQuery
 def delete_house_table(house_name):
     table_id = f"{project_id}.{dataset_id}.{house_name}"
@@ -55,15 +56,40 @@ def fetch_measurements(house_name, limit=None):
     measurements = [dict(row) for row in results]
     return measurements
 
+# Function to add a new user
+def add_user(username, password, idHouse, is_admin=False):
+    query = f"""
+        INSERT INTO `{project_id}.{dataset_id}.users` (id, username, password, idHouse, is_admin)
+        VALUES ('{uuid.uuid4()}', '{username}', '{password}', '{idHouse}', {is_admin})
+    """
+    query_job = bigquery_client.query(query)
+    query_job.result()
+
+# Function to delete a user
+def delete_user(user_id):
+    query = f"DELETE FROM `{project_id}.{dataset_id}.users` WHERE id = '{user_id}'"
+    query_job = bigquery_client.query(query)
+    query_job.result()
+
+# Function to fetch users from the BigQuery table
+def fetch_users():
+    query = f"SELECT * FROM `{project_id}.{dataset_id}.users`"
+    query_job = bigquery_client.query(query)
+    results = query_job.result()
+    users = [dict(row) for row in results]
+    return users
 
 @app.route('/')
 def home():
-    selected_house_url = request.args.get('house_name')  # Get the selected house URL from the URL query parameter
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    is_admin = session.get('is_admin')
+    idHouse = session.get('idHouse')
     
-    # Extract the house name from the URL
-    selected_house = selected_house_url.split('=')[-1] if selected_house_url else None
+    selected_house = request.args.get('house_name') if is_admin else idHouse
     
-    # Fetch measurements for the selected house if a house is selected
     measurements = []
     if selected_house:
         try:
@@ -74,28 +100,41 @@ def home():
         except Exception as e:
             flash(f'An error occurred: {str(e)}', 'error')
     
-    # Fetch list of houses
     tables = bigquery_client.list_tables(dataset_id)
-    houses = [table.table_id.split('.')[-1] for table in tables]  # Get only the table names
+    houses = [table.table_id.split('.')[-1] for table in tables]
 
-    return render_template('home.html', measurements=measurements, houses=houses)
-    
+    return render_template('home.html', measurements=measurements, houses=houses, is_admin=is_admin, selected_house=selected_house)
 
+@app.route('/add_user_route', methods=['POST'])
+def add_user_route():
+    if not session.get('is_admin'):
+        return redirect(url_for('home'))
 
+    username = request.form['username']
+    password = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    idHouse = request.form['idHouse']
+    is_admin = request.form.get('is_admin') == 'on'
 
+    add_user(username, password, idHouse, is_admin)
+    flash('User added successfully', 'success')
+    return redirect(url_for('manage_users'))
 
-# @app.route('/houses')
-# def list_houses():
-    # tables = bigquery_client.list_tables(dataset_id)
-    # houses = [table.table_id.split('.')[-1] for table in tables]  # Get only the table names
-    # print(houses)
-    # print(tables)
-    
-    # return render_template('home.html', houses=houses)
+@app.route('/manage_users')
+def manage_users():
+    if not session.get('is_admin'):
+        return redirect(url_for('home'))
 
+    users = fetch_users()
+    return render_template('manage_users.html', users=users)
 
+@app.route('/delete_user/<user_id>', methods=['POST'])
+def delete_user_route(user_id):
+    if not session.get('is_admin'):
+        return redirect(url_for('home'))
 
-
+    delete_user(user_id)
+    flash('User deleted successfully', 'success')
+    return redirect(url_for('manage_users'))
 
 @app.route('/add_house', methods=['POST'])
 def add_house():
@@ -108,13 +147,11 @@ def add_house():
             flash(f'House {house_name} created successfully.', 'success')
     return redirect(url_for('home'))  # Redirect back to the home route
 
-
 @app.route('/delete_house/<house_name>', methods=['POST'])
 def delete_house(house_name):
     delete_house_table(house_name)
     flash(f'House {house_name} deleted successfully.', 'success')
     return redirect(url_for('home'))  # Redirect back to the home route
-
 
 @app.route('/display_house/<house_name>')
 def display_house(house_name):
@@ -131,6 +168,37 @@ def about():
 @app.route('/contact')
 def contact():
     return render_template('contact.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = fetch_user_by_username(username)
+        if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['is_admin'] = user['is_admin']
+            session['idHouse'] = user['idHouse']
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid username or password', 'error')
+    
+    return render_template('login.html')
+
+def fetch_user_by_username(username):
+    query = f"SELECT * FROM `{project_id}.{dataset_id}.users` WHERE username = '{username}'"
+    query_job = bigquery_client.query(query)
+    results = query_job.result()
+    users = [dict(row) for row in results]
+    return users[0] if users else None
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

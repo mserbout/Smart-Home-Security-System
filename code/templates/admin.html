@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+    <h2>Admin Panel</h2>
+    <h3>Users</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>House ID</th>
+                <th>Is Admin</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.idHouse }}</td>
+                    <td>{{ user.is_admin }}</td>
+                    <td>
+                        <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="post">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Add User</h3>
+    <form method="post" action="{{ url_for('admin_add_user') }}">
+        <input type="text" name="username" placeholder="Username" required><br>
+        <input type="password" name="password" placeholder="Password" required><br>
+        <input type="text" name="idHouse" placeholder="House ID" required><br>
+        <input type="checkbox" name="is_admin"> Is Admin<br>
+        <button type="submit">Add User</button>
+    </form>
+    <a href="{{ url_for('home') }}">Home</a>
+</body>
+</html>

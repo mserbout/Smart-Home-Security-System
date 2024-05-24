@@ -14,6 +14,7 @@ const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
 String topic_PUB = "data/Malaga";
+String topic_SUB = "cmd/Malaga"; // Subscription topic
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
@@ -31,6 +32,9 @@ void conecta_mqtt() {
     Serial.print("Attempting MQTT connection...");
     if (mqtt_client.connect(ID_PLACA.c_str())) {
       Serial.println(" connected to broker: " + String(mqtt_server));
+      // Subscribe to the topic
+      mqtt_client.subscribe(topic_SUB.c_str());
+      Serial.println("Subscribed to topic: " + topic_SUB);
     } else {
       Serial.println("ERROR:" + String(mqtt_client.state()) + " retrying in 5s");
       delay(5000);
@@ -47,7 +51,15 @@ String getFormattedTimestamp() {
   return String(timestamp_string);
 }
 
-
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.println("Message received on topic: " + String(topic));
+  Serial.println("Payload: ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  // Handle the received message here
+}
 
 void setup() {
   Serial.begin(115200);
@@ -57,9 +69,11 @@ void setup() {
   conecta_wifi();
   mqtt_client.setServer(mqtt_server, 1883);
   mqtt_client.setBufferSize(512);
+  mqtt_client.setCallback(callback); // Set callback function
   conecta_mqtt();
   Serial.println("Device ID: " + ID_PLACA);
   Serial.println("Publication Topic: " + topic_PUB);
+  Serial.println("Subscription Topic: " + topic_SUB);
   Serial.println("Setup finished in " + String(millis()) + " ms");
   dht.setup(5, DHTesp::DHT11);
 
@@ -69,12 +83,11 @@ void setup() {
 
 unsigned long last_message = 0;
 
-
 void loop() {
   if (!mqtt_client.connected()) conecta_mqtt();
   mqtt_client.loop();
   unsigned long now = millis();
-  if (now - last_message >= 10000) {
+  if (now - last_message >= 100000) {
     float humidity = dht.getHumidity();
     float temperature = dht.getTemperature();
     last_message = now;
@@ -88,5 +101,3 @@ void loop() {
     mqtt_client.publish(topic_PUB.c_str(), mensaje.c_str());
   }
 }
-
-
