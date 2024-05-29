@@ -2,10 +2,23 @@
 #include <PubSubClient.h>
 #include "DHTesp.h"
 #include <time.h>
+#include <ArduinoJson.h>
 
 WiFiClient wClient;
 PubSubClient mqtt_client(wClient);
 DHTesp dht;
+
+int PIN_MOTION_SENSOR = 4;
+int PIN_SPEAKER = 12;
+int PIN_RED_LED = 13;
+int PIN_GREEN_LED = 15;
+bool alarm;
+int number_detection = 0;
+float humidity;
+float temperature;
+String status;
+String current_datetime;
+StaticJsonDocument<200> doc;
 
 // Update these with values suitable for your network.
 const char* ssid = "WIN-LAOM7JEF5R6 9062";
@@ -13,8 +26,9 @@ const char* password = "Lz0492&6";
 const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
-String topic_PUB = "data/Malaga";
-String topic_SUB = "cmd/Malaga"; // Subscription topic
+String topic_PUB_telegram = "data/telegram/Malaga";
+String topic_SUB_alarm = "cmd/alarm/Malaga"; // Subscription topic
+String topic_SUB_status = "cmd/status/Malaga"; // Subscription topic
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
@@ -33,8 +47,11 @@ void conecta_mqtt() {
     if (mqtt_client.connect(ID_PLACA.c_str())) {
       Serial.println(" connected to broker: " + String(mqtt_server));
       // Subscribe to the topic
-      mqtt_client.subscribe(topic_SUB.c_str());
-      Serial.println("Subscribed to topic: " + topic_SUB);
+      mqtt_client.subscribe(topic_SUB_alarm.c_str());
+      Serial.println("Subscribed to topic: " + topic_SUB_alarm);
+
+      mqtt_client.subscribe(topic_SUB_status.c_str());
+      Serial.println("Subscribed to topic: " + topic_SUB_status);
     } else {
       Serial.println("ERROR:" + String(mqtt_client.state()) + " retrying in 5s");
       delay(5000);
@@ -54,10 +71,53 @@ String getFormattedTimestamp() {
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("Message received on topic: " + String(topic));
   Serial.println("Payload: ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
+  
+  char messageBuffer[length + 1]; // Create a buffer to store the payload
+  memcpy(messageBuffer, payload, length); // Copy the payload into the buffer
+  messageBuffer[length] = '\0'; // Null-terminate the buffer
+  
+  String message = String(messageBuffer); // Create a String from the buffer
+
+  Serial.println(message);
+
+  if (String(topic) == topic_SUB_alarm) {
+    if (message[0] == '1') {
+      Serial.println("Alarm is on!!");
+      digitalWrite(PIN_GREEN_LED, HIGH);
+      digitalWrite(PIN_RED_LED, LOW);
+      alarm = true;
+    } else {
+      Serial.println("Alarm is off!!");
+      digitalWrite(PIN_GREEN_LED, LOW);
+      digitalWrite(PIN_RED_LED, HIGH);
+      alarm = false;
+    }
   }
-  Serial.println();
+
+  if (String(topic) == topic_SUB_status) {
+    humidity = dht.getHumidity();
+    temperature = dht.getTemperature();
+    if (alarm) {
+      status = "Alarm ON";
+    } else {
+      status = "Alarm OFF";
+    }
+    current_datetime = getFormattedTimestamp();
+    doc["temperature"] = temperature;
+    doc["humidity"] = humidity;
+    doc["alarm"] = status;
+    doc["detection"] = number_detection;
+    doc["time"] = current_datetime;
+    
+    String house_status;
+    serializeJson(doc, house_status);
+    Serial.println();
+    Serial.println("Topic   : " + topic_PUB_telegram);
+    Serial.println("Payload : " + house_status);
+    mqtt_client.publish(topic_PUB_telegram.c_str(), house_status.c_str());
+
+    number_detection = 0;
+  }
   // Handle the received message here
 }
 
@@ -72,11 +132,14 @@ void setup() {
   mqtt_client.setCallback(callback); // Set callback function
   conecta_mqtt();
   Serial.println("Device ID: " + ID_PLACA);
-  Serial.println("Publication Topic: " + topic_PUB);
-  Serial.println("Subscription Topic: " + topic_SUB);
+  Serial.println("Publication Topic: " + topic_PUB_telegram);
+  Serial.println("Subscription Topic: " + topic_SUB_alarm + " " + topic_SUB_status);
   Serial.println("Setup finished in " + String(millis()) + " ms");
   dht.setup(5, DHTesp::DHT11);
-
+  pinMode(PIN_GREEN_LED, OUTPUT);
+  digitalWrite(PIN_GREEN_LED, LOW);
+  pinMode(PIN_RED_LED, OUTPUT);
+  digitalWrite(PIN_RED_LED, LOW);
   // Set up NTP
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 }
@@ -87,17 +150,41 @@ void loop() {
   if (!mqtt_client.connected()) conecta_mqtt();
   mqtt_client.loop();
   unsigned long now = millis();
+
+  bool sensorValue = digitalRead(PIN_MOTION_SENSOR);
+  Serial.print("Sensor Value: ");
+  Serial.println(sensorValue);
+  delay(1000);
+
+  if (alarm) {
+    if (sensorValue) {
+      tone(PIN_SPEAKER, 440);
+      delay(1000);
+
+      number_detection++;
+      noTone(PIN_SPEAKER);
+      delay(1000);
+    }
+  }
+
   if (now - last_message >= 100000) {
-    float humidity = dht.getHumidity();
-    float temperature = dht.getTemperature();
+    humidity = dht.getHumidity();
+    temperature = dht.getTemperature();
     last_message = now;
     String current_datetime = getFormattedTimestamp();
-    String mensaje = "{\"id\":\"id1\", \"temperature\":" + String(temperature, 2) + ", \"humidity\":" + String(humidity, 2) +
-                     ", \"motionDetection\":" + String(true ? "true" : "false") + ", \"longitude\":" + String(12.0, 6) + 
-                     ", \"latitude\":" + String(50.0, 6) + ", \"time\":\"" + current_datetime + "\"}";
+    doc["temperature"] = temperature;
+    doc["humidity"] = humidity;
+    doc["alarm"] = sensorValue;
+    doc["detection"] = number_detection;
+    doc["longitude"] = 12.0;
+    doc["latitude"] = 50.0;
+    doc["time"] = current_datetime;
+
+    String mensaje;
+    serializeJson(doc, mensaje);
     Serial.println();
-    Serial.println("Topic   : " + topic_PUB);
+    Serial.println("Topic   : " + topic_PUB_telegram);
     Serial.println("Payload : " + mensaje);
-    mqtt_client.publish(topic_PUB.c_str(), mensaje.c_str());
+    mqtt_client.publish(topic_PUB_telegram.c_str(), mensaje.c_str());
   }
 }
