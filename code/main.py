@@ -12,7 +12,7 @@ app.secret_key = 'your_secret_key'  # Needed for flash messages
 
 # BigQuery project ID and dataset ID
 project_id = 'trans-market-419700'  # Replace with your Google Cloud project ID
-dataset_id = 'smart_home_security_system'
+dataset_id = '  '
 
 # Function to create a new house (table) in BigQuery
 def create_house_table(house_name):
@@ -20,7 +20,8 @@ def create_house_table(house_name):
         bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("temperature", "FLOAT", mode="REQUIRED"),
         bigquery.SchemaField("humidity", "FLOAT", mode="REQUIRED"),
-        bigquery.SchemaField("motionDetection", "BOOLEAN", mode="REQUIRED"),
+        bigquery.SchemaField("Alarm Status", "BOOLEAN", mode="REQUIRED"),
+        bigquery.SchemaField("Number Detection", "INTEGER", mode="REQUIRED"),
         bigquery.SchemaField("longitude", "FLOAT", mode="REQUIRED"),
         bigquery.SchemaField("latitude", "FLOAT", mode="REQUIRED"),
         bigquery.SchemaField("time", "TIMESTAMP")
@@ -125,7 +126,7 @@ def manage_users():
         return redirect(url_for('home'))
 
     users = fetch_users()
-    return render_template('manage_users.html', users=users)
+    return render_template('users.html', users=users)
 
 @app.route('/delete_user/<user_id>', methods=['POST'])
 def delete_user_route(user_id):

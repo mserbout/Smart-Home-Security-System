@@ -1,18 +1,27 @@
 import json
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from multiprocessing import context
+from flask import Flask, request, jsonify
+
+# Import other necessary modules
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 import paho.mqtt.publish as publish
 import paho.mqtt.client as mqtt
 from google.cloud import bigquery
 import bcrypt
 import asyncio
 
+# Initialize Flask application
+app = Flask(__name__)
+
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Telegram bot token
 TOKEN = '7496052535:AAEKyaYYC0xgYKUtFoVJunliT7OVszW2jnw'
+
+bot = Bot(token=TOKEN)
 
 # MQTT broker details
 MQTT_BROKER_HOST = '35.192.204.119'
@@ -51,7 +60,10 @@ def on_message(client, userdata, message):
     status_message = message.payload.decode('utf-8')
 
 # Function to handle /start command
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/start', methods=['POST'])
+async def start():
+    print("I'm in start")
+    update = Update.de_json(request.get_json(), bot)
     keyboard = [
         [InlineKeyboardButton("Login", callback_data='login')]
     ]
@@ -67,13 +79,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # Function to handle login process
-async def login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/login', methods=['POST'])
+async def login():
+    update = Update.de_json(request.get_json(), bot)
     query = update.callback_query
     await query.answer()
     await query.edit_message_text("Please enter your username and password separated by a space, e.g., `username password`")
 
 # Function to handle user input after login
-async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/handle_login', methods=['POST'])
+async def handle_login():
+    update = Update.de_json(request.get_json(), bot)
     try:
         message_text = update.message.text
         username, password = message_text.split()
@@ -89,7 +105,9 @@ async def handle_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text('Invalid format. Please provide username and password.')
 
 # Function to show main menu after login or after any command
-async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/show_main_menu', methods=['POST'])
+async def show_main_menu():
+    update = Update.de_json(request.get_json(), bot)
     keyboard = [
         [InlineKeyboardButton("Send Command", callback_data='send_command')],
         [InlineKeyboardButton("Show Status", callback_data='show_status')],
@@ -100,7 +118,9 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await message.reply_text('Choose an option:', reply_markup=reply_markup)
 
 # Function to handle authentication and send MQTT command
-async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/send_command', methods=['POST'])
+async def send_command():
+    update = Update.de_json(request.get_json(), bot)
     query = update.callback_query
     await query.answer()
 
@@ -112,7 +132,9 @@ async def send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Choose a command:", reply_markup=reply_markup)
 
-async def handle_send_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/handle_send_command', methods=['POST'])
+async def handle_send_command():
+    update = Update.de_json(request.get_json(), bot)
     query = update.callback_query
     idHouse = context.user_data.get('idHouse')
     
@@ -134,7 +156,9 @@ async def handle_send_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await start(update, context)
 
 # Function to show house status
-async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/show_status', methods=['POST'])
+async def show_status():
+    update = Update.de_json(request.get_json(), bot)
     global status_message
     idHouse = context.user_data.get('idHouse')
     if idHouse:
@@ -200,7 +224,9 @@ async def show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # Function to handle logout process
-async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/logout', methods=['POST'])
+async def logout():
+    update = Update.de_json(request.get_json(), bot)
     idHouse = context.user_data.get('idHouse')
     if idHouse:
         context.user_data.clear()
@@ -212,8 +238,18 @@ async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text('Please login first.')
         await start(update, context)
 
+
+@app.route('/telegram_webhook', methods=['POST'])
+def telegram_webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    
+    print("webhook")
+    return 'OK'
+
 # Function to handle user's choices after login
-async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@app.route('/handle_choice', methods=['POST'])
+async def handle_choice():
+    update = Update.de_json(request.get_json(), bot)
     query = update.callback_query
     await query.answer()
     if query.data == 'send_command':
@@ -227,21 +263,8 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await handle_send_command(update, context)
 
-def main():
-    # Create the Application and pass it your bot's token.
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    # Register command handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(login, pattern='^login$'))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_login))
-    application.add_handler(CommandHandler("send_command", handle_send_command))
-    application.add_handler(CommandHandler("status", show_status))
-    application.add_handler(CommandHandler("logout", logout))
-    application.add_handler(CallbackQueryHandler(handle_choice, pattern='^(send_command|show_status|logout|start_alarm|stop_alarm|back_to_menu)$'))
-
-    # Start the Bot
-    application.run_polling()
-
+# Run the Flask application
 if __name__ == '__main__':
-    main()
+    app.run(debug=True)
+
+

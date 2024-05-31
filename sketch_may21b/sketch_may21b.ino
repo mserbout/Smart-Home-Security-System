@@ -27,10 +27,11 @@ const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
 String topic_PUB_telegram = "data/telegram/Malaga";
+String topic_PUB_google = "data/google/Malaga";
 String topic_SUB_alarm = "cmd/alarm/Malaga"; // Subscription topic
 String topic_SUB_status = "cmd/status/Malaga"; // Subscription topic
 
-void conecta_wifi() {
+void conecta_wifi() {goog
   Serial.println("Connecting to " + String(ssid));
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -174,8 +175,8 @@ void loop() {
     String current_datetime = getFormattedTimestamp();
     doc["temperature"] = temperature;
     doc["humidity"] = humidity;
-    doc["alarm"] = sensorValue;
-    doc["detection"] = number_detection;
+    doc["Alarm Status"] = sensorValue;
+    doc["Number Detection"] = number_detection;
     doc["longitude"] = 12.0;
     doc["latitude"] = 50.0;
     doc["time"] = current_datetime;
@@ -183,8 +184,8 @@ void loop() {
     String mensaje;
     serializeJson(doc, mensaje);
     Serial.println();
-    Serial.println("Topic   : " + topic_PUB_telegram);
+    Serial.println("Topic   : " + topic_PUB_google);
     Serial.println("Payload : " + mensaje);
-    mqtt_client.publish(topic_PUB_telegram.c_str(), mensaje.c_str());
+    mqtt_client.publish(topic_PUB_google.c_str(), mensaje.c_str());
   }
 }
