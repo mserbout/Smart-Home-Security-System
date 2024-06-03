@@ -44,9 +44,6 @@
         <h3 class="chart-title">Motion Events Over Time</h3>
         <div id="motion_chart"></div>
         
-        <h3 class="chart-title">Geographical Data</h3>
-        <div id="map" style="height: 400px;"></div>
-        
         <div class="table-container">
             <table class="data-table" id="dataTable">
                 <thead>
@@ -85,7 +82,6 @@
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
     function selectHouse() {
         document.getElementById('house-select-form').submit();
@@ -211,18 +207,6 @@
 
         Plotly.newPlot('chart', tempHumidityData, { title: `Temperature and Humidity (${timeRange})` });
         Plotly.newPlot('motion_chart', motionData, { title: `Motion Events (${timeRange})` });
-
-        // Adding map visualization
-        const map = L.map('map').setView([measurements[0].latitude, measurements[0].longitude], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        measurements.forEach(measurement => {
-            L.marker([measurement.latitude, measurement.longitude]).addTo(map)
-                .bindPopup(`Temp: ${measurement.temperature}°C<br>Humidity: ${measurement.humidity}%<br>Time: ${measurement.time}`)
-                .openPopup();
-        });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -234,7 +218,7 @@
     }
 
     function downloadCSV() {
-        const measurements = {{ measurements|safe }};
+        const measurements = {{ measurements|tojson }};
         const csvContent = "data:text/csv;charset=utf-8," + 
             ["ID,Temperature,Humidity,Alarm Status,Number Detection,Longitude,Latitude,Time"]
             .concat(measurements.map(m => 
