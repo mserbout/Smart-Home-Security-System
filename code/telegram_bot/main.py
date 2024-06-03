@@ -37,40 +37,6 @@ mqtt_messages = {}
 client_to_user = {}
 status_message = None
 
-"""
-# Coroutine to handle sending MQTT messages
-async def send_mqtt_messages():
-    while True:
-        print(mqtt_message_queue.qsize())
-        if mqtt_message_queue.qsize() > 0:
-            # Wait for a message to be enqueued
-            print("Checking message queue")
-            message = await mqtt_message_queue.get()
-            print(message)
-            # Send the message
-            publish.single(message['topic'], message['payload'], hostname=message['hostname'], port=message['port'])
-        
-            # Notify the queue that the message has been processed
-            mqtt_message_queue.task_done()
-        else:
-            print("Empty queue")
-            await asyncio.sleep(1)
-
-
-# Function to enqueue MQTT messages
-async def enqueue_mqtt_message(topic, payload, hostname, port):
-    message = {'topic': topic, 'payload': payload, 'hostname': hostname, 'port': port}
-    print(message)
-    await mqtt_message_queue.put(message)
-
-# Function to request status
-async def request_status(idHouse, chat_id):
-    request_topic = f"cmd/status/{idHouse}"
-    print(request_topic)
-    await enqueue_mqtt_message(request_topic, 'status', MQTT_BROKER_HOST, MQTT_BROKER_PORT)
-    return chat_id
-
-"""
 
 def add_mqtt_message_for_user(user_id, message):
     mqtt_messages[user_id] = message

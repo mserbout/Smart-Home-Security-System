@@ -4,9 +4,16 @@ from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
 import uuid
 import bcrypt
+import paho.mqtt.client as mqtt
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
+# MQTT configuration
+mqtt_broker = '35.192.204.119'
+mqtt_port = 1883
+
+mqtt_client = mqtt.Client()
 
 # Initialize BigQuery client
 bigquery_client = bigquery.Client()
@@ -178,6 +185,26 @@ def display_house(house_name):
         return render_template('home.html', measurements=measurements, houses=houses, selected_house=house_name, is_admin=session.get('is_admin'))
     else:
         return redirect(url_for('home'))
+
+
+@app.route('/start_alarm/<house_name>', methods=['POST'])
+def start_alarm(house_name):
+    try:
+        mqtt_client.connect(mqtt_broker, mqtt_port, 60)
+        mqtt_client.publish(f'cmd/alarm/{house_name}', '1')
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/stop_alarm/<house_name>', methods=['POST'])
+def stop_alarm(house_name):
+    try:
+        mqtt_client.connect(mqtt_broker, mqtt_port, 60)
+        mqtt_client.publish(f'cmd/alarm/{house_name}', '0')
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/about')
 def about():

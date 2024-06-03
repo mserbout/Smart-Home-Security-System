@@ -57,6 +57,10 @@
                         <p class="card-text" id="alarm-status-value">{{ 'Active' if measurements[-1].alarm_status else 'Inactive' }}</p>
                     </div>
                 </div>
+                <div class="alarm-controls">
+                    <button id="startAlarmButton" class="btn btn-danger">Start Alarm</button>
+                    <button id="stopAlarmButton" class="btn btn-success">Stop Alarm</button>
+                </div>
             </div>
 
             <button id="refreshButton" class="btn btn-secondary">Refresh</button>
@@ -101,6 +105,7 @@
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <script>
     function selectHouse() {
         document.getElementById('house-select-form').submit();
@@ -234,6 +239,34 @@
             updateTable(await fetchMeasurements(houseName));
             updateAlarmStatusCardBackground(updatedMeasurement.alarm_status);
         });
+    });
+
+    document.getElementById('startAlarmButton').addEventListener('click', function() {
+        fetch('/start_alarm/{{ selected_house }}', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    //alert('Alarm started successfully');
+                    updateAlarmStatusCardBackground(true);
+                    document.getElementById('alarm-status-value').textContent = 'Active';
+                } else {
+                    alert('Failed to start alarm');
+                }
+            });
+    });
+
+    document.getElementById('stopAlarmButton').addEventListener('click', function() {
+        fetch('/stop_alarm/{{ selected_house }}', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    //alert('Alarm stopped successfully');
+                    updateAlarmStatusCardBackground(false);
+                    document.getElementById('alarm-status-value').textContent = 'Inactive';
+                } else {
+                    alert('Failed to stop alarm');
+                }
+            });
     });
 </script>
 {% endblock %}

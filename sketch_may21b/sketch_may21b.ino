@@ -9,10 +9,9 @@
 WiFiClient wClient;
 PubSubClient mqtt_client(wClient);
 DHTesp dht;
-
 WiFiUDP ntpUDP;
 const long utcOffsetInSeconds = 7200;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+NTPClient timeClient(ntpUDP, "time.google.com", utcOffsetInSeconds);
 
 int PIN_MOTION_SENSOR = 4;
 int PIN_SPEAKER = 12;
@@ -21,14 +20,11 @@ int PIN_GREEN_LED = 15;
 bool alarm = false;
 int number_detection = 0;
 int half_hour = 1000 * 60 * 30;
-float humidity;
-float temperature;
+volatile float humidity;
+volatile float temperature;
 String status;
 String current_datetime;
-StaticJsonDocument<200> docStatus;
-StaticJsonDocument<200> docAlarm;
-StaticJsonDocument<200> docTelegram;
-StaticJsonDocument<200> docCoordinates;
+
 
 // Update these with values suitable for your network.
 const char* ssid = "PTVTELECOM_bQPS";
@@ -38,11 +34,12 @@ const char* password = "REHb3RSGTQCQ";
 const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
-String topic_PUB_telegram = "data/telegram/nicolo";
-String topic_PUB_bigQuery = "data/google/nicolo";
-String topic_PUB_coordinates = "data/coordinates/nicolo";
-String topic_SUB_alarm = "cmd/alarm/nicolo"; // Subscription topic
-String topic_SUB_status = "cmd/status/nicolo"; // Subscription topic
+String topic_PUB_telegram = "data/telegram/Malaga";
+String topic_PUB_bigQuery = "data/google/Malaga";
+String topic_PUB_website = "data/website/Malaga";
+String topic_PUB_coordinates = "data/coordinates/Malaga";
+String topic_SUB_alarm = "cmd/alarm/Malaga"; // Subscription topic
+String topic_SUB_status = "cmd/status/Malaga"; // Subscription topic
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
@@ -73,13 +70,57 @@ void conecta_mqtt() {
   }
 }
 
-String getFormattedTimestamp() {
-  time_t now = time(nullptr);
-  struct tm* p_tm = localtime(&now);
-  char timestamp_string[20]; // YYYY-MM-DD HH:MM:SS format
-  snprintf(timestamp_string, sizeof(timestamp_string), "%04d-%02d-%02d %02d:%02d:%02d", p_tm->tm_year + 1900, p_tm->tm_mon + 1, p_tm->tm_mday,
-           p_tm->tm_hour, p_tm->tm_min, p_tm->tm_sec);
-  return String(timestamp_string);
+String epochToDateTimeString(time_t epochTime) {
+    struct tm *ptm = gmtime ((time_t *)&epochTime);
+    String formattedDateTime;
+    String day;
+    String month;
+    String year;
+    String hourss;
+    String minutess;
+    String secondss;
+    
+    int monthDay = ptm->tm_mday;
+    int currentMonth = ptm->tm_mon+1;
+    int currentYear = ptm->tm_year+1900;
+
+    int hours = ptm->tm_hour;
+    int minutes = ptm->tm_min;
+    int seconds = ptm->tm_sec;
+
+    if(monthDay < 10){
+      day = "0" + String(monthDay); 
+    }else{
+      day = String(monthDay); 
+    }
+
+    if(currentMonth < 10){
+      month = "0" + String(currentMonth); 
+    }else{
+      month = String(currentMonth); 
+    }
+
+    if(hours < 10){
+      hourss = "0" + String(hours); 
+    }else{
+      hourss = String(hours); 
+    }
+
+    if(minutes < 10){
+      minutess = "0" + String(minutes); 
+    }else{
+      minutess = String(minutes); 
+    }
+
+    if(seconds < 10){
+      secondss = "0" + String(seconds); 
+    }else{
+      secondss = String(seconds); 
+    }
+    
+    formattedDateTime = String(currentYear) + "-" + month + "-" + day + " " + hourss + ":" + minutess + ":" + secondss + " UTC";
+
+    return formattedDateTime;
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -100,11 +141,17 @@ void callback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(PIN_GREEN_LED, HIGH);
       digitalWrite(PIN_RED_LED, LOW);
       alarm = true;
+      mqtt_client.publish(topic_PUB_website.c_str(), "1");
+      Serial.println("Topic   : " + topic_PUB_website);
+      Serial.println("Payload : 1");
     } else {
       Serial.println("Alarm is off!!");
       digitalWrite(PIN_GREEN_LED, LOW);
       digitalWrite(PIN_RED_LED, HIGH);
       alarm = false;
+      mqtt_client.publish(topic_PUB_website.c_str(), "0");
+      Serial.println("Topic   : " + topic_PUB_website);
+      Serial.println("Payload : 0");
       number_detection = 0;
     }
   }
@@ -117,7 +164,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
     } else {
       status = "Alarm OFF";
     }
-    current_datetime = timeClient.getFormattedTime();
+    StaticJsonDocument<200> docTelegram;
+    
+    current_datetime = epochToDateTimeString(timeClient.getEpochTime());
     docTelegram["temperature"] = temperature;
     docTelegram["humidity"] = humidity;
     docTelegram["alarm"] = status;
@@ -154,7 +203,8 @@ void setup() {
   digitalWrite(PIN_GREEN_LED, LOW);
   pinMode(PIN_RED_LED, OUTPUT);
   digitalWrite(PIN_RED_LED, HIGH);
-
+  
+  StaticJsonDocument<200> docCoordinates;
   docCoordinates["longitude"] = -4.426812;
   docCoordinates["latitude"] = 36.713397;
   String msgCoordinates;
@@ -181,7 +231,7 @@ void loop() {
   bool sensorValue = digitalRead(PIN_MOTION_SENSOR);
   //Serial.print("Sensor Value: ");
   //Serial.println(sensorValue);
-
+  //Serial.println(timeClient.getFormattedTime());
   if (alarm) {
     if (sensorValue) {
       tone(PIN_SPEAKER, 440);
@@ -194,15 +244,19 @@ void loop() {
   }
 
   if (alarm && (number_detection > 0) && (now - last_alarm_message >= 20000)) {
+    StaticJsonDocument<200> docAlarm;
+    
     humidity = dht.getHumidity();
     temperature = dht.getTemperature();
+    
     last_alarm_message = now;
-    String current_datetime = timeClient.getFormattedTime();
+    current_datetime = epochToDateTimeString(timeClient.getEpochTime());
+    
     docAlarm["id"] = "id2";
     docAlarm["temperature"] = temperature;
     docAlarm["humidity"] = humidity;
-    docAlarm["Alarm Status"] = sensorValue;
-    docAlarm["Number Detection"] = number_detection;
+    docAlarm["alarm_status"] = alarm;
+    docAlarm["number_detection"] = number_detection;
     docAlarm["longitude"] = -4.426812;
     docAlarm["latitude"] = 36.713397;
     docAlarm["time"] = current_datetime;
@@ -216,16 +270,20 @@ void loop() {
     
   }
 
-  if (now - last_message >= half_hour) {
+  if (now - last_message >= 2000) {
+    StaticJsonDocument<200> docStatus;
+    
     humidity = dht.getHumidity();
     temperature = dht.getTemperature();
     last_message = now;
-    String current_datetime = timeClient.getFormattedTime();
+    current_datetime = epochToDateTimeString(timeClient.getEpochTime());
+    //epochToDateTimeString(timeClient.getEpochTime());
+    //Serial.println("current: " + current_datetime);
     docStatus["id"] = "id2";
     docStatus["temperature"] = temperature;
     docStatus["humidity"] = humidity;
-    docStatus["Alarm Status"] = sensorValue;
-    docStatus["Number Detection"] = number_detection;
+    docStatus["alarm_status"] = alarm;
+    docStatus["number_detection"] = number_detection;
     docStatus["longitude"] = -4.426812;
     docStatus["latitude"] = 36.713397;
     docStatus["time"] = current_datetime;
