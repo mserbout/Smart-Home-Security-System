@@ -3,35 +3,48 @@
 #include "DHTesp.h"
 #include <time.h>
 #include <ArduinoJson.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 WiFiClient wClient;
 PubSubClient mqtt_client(wClient);
 DHTesp dht;
 
+WiFiUDP ntpUDP;
+const long utcOffsetInSeconds = 7200;
+NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+
 int PIN_MOTION_SENSOR = 4;
 int PIN_SPEAKER = 12;
 int PIN_RED_LED = 13;
 int PIN_GREEN_LED = 15;
-bool alarm;
+bool alarm = false;
 int number_detection = 0;
+int half_hour = 1000 * 60 * 30;
 float humidity;
 float temperature;
 String status;
 String current_datetime;
-StaticJsonDocument<200> doc;
+StaticJsonDocument<200> docStatus;
+StaticJsonDocument<200> docAlarm;
+StaticJsonDocument<200> docTelegram;
+StaticJsonDocument<200> docCoordinates;
 
 // Update these with values suitable for your network.
-const char* ssid = "WIN-LAOM7JEF5R6 9062";
-const char* password = "Lz0492&6";
+const char* ssid = "PTVTELECOM_bQPS";
+const char* password = "REHb3RSGTQCQ";
+//const char* ssid = "WIN-LAOM7JEF5R6 9062";
+//const char* password = "Lz0492&6";
 const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
-String topic_PUB_telegram = "data/telegram/Malaga";
-String topic_PUB_google = "data/google/Malaga";
-String topic_SUB_alarm = "cmd/alarm/Malaga"; // Subscription topic
-String topic_SUB_status = "cmd/status/Malaga"; // Subscription topic
+String topic_PUB_telegram = "data/telegram/nicolo";
+String topic_PUB_bigQuery = "data/google/nicolo";
+String topic_PUB_coordinates = "data/coordinates/nicolo";
+String topic_SUB_alarm = "cmd/alarm/nicolo"; // Subscription topic
+String topic_SUB_status = "cmd/status/nicolo"; // Subscription topic
 
-void conecta_wifi() {goog
+void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -92,6 +105,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
       digitalWrite(PIN_GREEN_LED, LOW);
       digitalWrite(PIN_RED_LED, HIGH);
       alarm = false;
+      number_detection = 0;
     }
   }
 
@@ -103,21 +117,20 @@ void callback(char* topic, byte* payload, unsigned int length) {
     } else {
       status = "Alarm OFF";
     }
-    current_datetime = getFormattedTimestamp();
-    doc["temperature"] = temperature;
-    doc["humidity"] = humidity;
-    doc["alarm"] = status;
-    doc["detection"] = number_detection;
-    doc["time"] = current_datetime;
+    current_datetime = timeClient.getFormattedTime();
+    docTelegram["temperature"] = temperature;
+    docTelegram["humidity"] = humidity;
+    docTelegram["alarm"] = status;
+    docTelegram["detection"] = number_detection;
+    docTelegram["time"] = current_datetime;
     
     String house_status;
-    serializeJson(doc, house_status);
+    serializeJson(docTelegram, house_status);
     Serial.println();
     Serial.println("Topic   : " + topic_PUB_telegram);
     Serial.println("Payload : " + house_status);
     mqtt_client.publish(topic_PUB_telegram.c_str(), house_status.c_str());
-
-    number_detection = 0;
+    
   }
   // Handle the received message here
 }
@@ -140,22 +153,34 @@ void setup() {
   pinMode(PIN_GREEN_LED, OUTPUT);
   digitalWrite(PIN_GREEN_LED, LOW);
   pinMode(PIN_RED_LED, OUTPUT);
-  digitalWrite(PIN_RED_LED, LOW);
-  // Set up NTP
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  digitalWrite(PIN_RED_LED, HIGH);
+
+  docCoordinates["longitude"] = -4.426812;
+  docCoordinates["latitude"] = 36.713397;
+  String msgCoordinates;
+  serializeJson(docCoordinates, msgCoordinates);
+
+  Serial.println();
+  Serial.println("Topic   : " + topic_PUB_coordinates);
+  Serial.println("Payload : " + msgCoordinates);
+  
+  mqtt_client.publish(topic_PUB_coordinates.c_str(), msgCoordinates.c_str());
+  
+  timeClient.setTimeOffset(utcOffsetInSeconds);
+  timeClient.begin();
 }
 
 unsigned long last_message = 0;
-
+unsigned long last_alarm_message = 0;
 void loop() {
   if (!mqtt_client.connected()) conecta_mqtt();
   mqtt_client.loop();
+  timeClient.update();
   unsigned long now = millis();
 
   bool sensorValue = digitalRead(PIN_MOTION_SENSOR);
-  Serial.print("Sensor Value: ");
-  Serial.println(sensorValue);
-  delay(1000);
+  //Serial.print("Sensor Value: ");
+  //Serial.println(sensorValue);
 
   if (alarm) {
     if (sensorValue) {
@@ -164,28 +189,52 @@ void loop() {
 
       number_detection++;
       noTone(PIN_SPEAKER);
-      delay(1000);
+      delay(1000);   
     }
   }
 
-  if (now - last_message >= 100000) {
+  if (alarm && (number_detection > 0) && (now - last_alarm_message >= 20000)) {
+    humidity = dht.getHumidity();
+    temperature = dht.getTemperature();
+    last_alarm_message = now;
+    String current_datetime = timeClient.getFormattedTime();
+    docAlarm["id"] = "id2";
+    docAlarm["temperature"] = temperature;
+    docAlarm["humidity"] = humidity;
+    docAlarm["Alarm Status"] = sensorValue;
+    docAlarm["Number Detection"] = number_detection;
+    docAlarm["longitude"] = -4.426812;
+    docAlarm["latitude"] = 36.713397;
+    docAlarm["time"] = current_datetime;
+
+    String msgAlarm;
+    serializeJson(docAlarm, msgAlarm);
+    Serial.println();
+    Serial.println("Topic   : " + topic_PUB_bigQuery);
+    Serial.println("Payload : " + msgAlarm);
+    mqtt_client.publish(topic_PUB_bigQuery.c_str(), msgAlarm.c_str());
+    
+  }
+
+  if (now - last_message >= half_hour) {
     humidity = dht.getHumidity();
     temperature = dht.getTemperature();
     last_message = now;
-    String current_datetime = getFormattedTimestamp();
-    doc["temperature"] = temperature;
-    doc["humidity"] = humidity;
-    doc["Alarm Status"] = sensorValue;
-    doc["Number Detection"] = number_detection;
-    doc["longitude"] = 12.0;
-    doc["latitude"] = 50.0;
-    doc["time"] = current_datetime;
+    String current_datetime = timeClient.getFormattedTime();
+    docStatus["id"] = "id2";
+    docStatus["temperature"] = temperature;
+    docStatus["humidity"] = humidity;
+    docStatus["Alarm Status"] = sensorValue;
+    docStatus["Number Detection"] = number_detection;
+    docStatus["longitude"] = -4.426812;
+    docStatus["latitude"] = 36.713397;
+    docStatus["time"] = current_datetime;
 
-    String mensaje;
-    serializeJson(doc, mensaje);
+    String msgBigQuery;
+    serializeJson(docStatus, msgBigQuery);
     Serial.println();
-    Serial.println("Topic   : " + topic_PUB_google);
-    Serial.println("Payload : " + mensaje);
-    mqtt_client.publish(topic_PUB_google.c_str(), mensaje.c_str());
+    Serial.println("Topic   : " + topic_PUB_bigQuery);
+    Serial.println("Payload : " + msgBigQuery);
+    mqtt_client.publish(topic_PUB_bigQuery.c_str(), msgBigQuery.c_str());
   }
 }

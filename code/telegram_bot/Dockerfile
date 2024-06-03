@@ -1,21 +1,26 @@
-# Use the official Python image as a base
-FROM python:3.8-slim
+# Usa una base image con Python
+FROM python:3.9-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-# Set the working directory in the container
+# Imposta la directory di lavoro
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copia i file di progetto nel container
+COPY . .
 
-# Install dependencies
+# Copia il file delle credenziali nel container
+COPY key/project-uma-59328-f7ae5187b4a7.json /app/service-account-file.json
+
+# Imposta la variabile d'ambiente per le credenziali
+ENV GOOGLE_APPLICATION_CREDENTIALS="/app/service-account-file.json"
+
+# Aggiorna pip
+RUN pip install --upgrade pip
+
+# Installa le dipendenze
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port your app runs on
+# Esponi la porta su cui il server web sarà in ascolto
 EXPOSE 8080
 
-# Command to run your application
-CMD ["python", "python-telegram-bot.py"]
+# Comando per avviare l'applicazione
+CMD ["python", "main.py"]

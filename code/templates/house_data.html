@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}House Data{% endblock %}
+
+
+{% block content %}
+<h1>Measurements for {{ house_name }}</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Temperature</th>
+            <th>Humidity</th>
+            <th>Alarm Status</th>
+            <th>Number Detection</th>
+            <th>Longitude</th>
+            <th>Latitude</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for measurement in measurements %}
+        <tr>
+            <td>{{ measurement.temperature }}</td>
+            <td>{{ measurement.humidity }}</td>
+            <td>{{ measurement.Alarm_Status }}</td>
+            <td>{{ measurement.Number_Detection }}</td>
+            <td>{{ measurement.longitude }}</td>
+            <td>{{ measurement.latitude }}</td>
+            <td>{{ measurement.time }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

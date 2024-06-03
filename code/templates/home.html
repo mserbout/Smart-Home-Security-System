@@ -1,71 +1,239 @@
 {% extends 'base.html' %}
 
-{% block title %}Home - My Website{% endblock %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='home.css') }}">
+<div class="home-container">
+    <h1 class="title">Welcome to Smart Home Security System</h1>
+    
+    {% if is_admin %}
+        <div class="admin-controls">
+            <form method="get" action="/" id="house-select-form">
+                <label for="house_name" class="control-label">Select House:</label>
+                <select name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
+                    <option value="" disabled selected>Select a house</option>
+                    {% for house in houses %}
+                        <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            
+            <form method="post" action="/add_house">
+                <label for="new_house_name" class="control-label">Add New House:</label>
+                <input type="text" name="house_name" id="new_house_name" placeholder="Enter house name" required>
+                <button type="submit" class="btn btn-primary">Add House</button>
+            </form>
+        </div>
 
-<h1>Welcome to Smart Home Security System</h1>
+        <div class="house-list">
+            <h2>House List</h2>
+            <ul class="house-list-ul">
+                {% for house in houses %}
+                    <li class="house-list-item">
+                        <span class="house-name" onclick="displayHouse('{{ house }}')" style="cursor:pointer;">{{ house }}</span>
+                        <form method="post" action="/delete_house/{{ house }}" class="inline-form" onsubmit="return deleteHouse(event, '{{ house }}')">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-{% if is_admin %}
-<h1>Manage Houses</h1>
+    <div class="house-data">
+        {% if measurements %}
+            <h2 class="data-title">Data for {{ selected_house }}</h2>
+            
+            <div class="info-cards">
+                <div class="card" id="number-detection-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Number of Detections</h5>
+                        <p class="card-text" id="number-detection-value">{{ measurements[-1].number_detection }}</p>
+                    </div>
+                </div>
+                <div class="card" id="alarm-status-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Alarm Status</h5>
+                        <p class="card-text" id="alarm-status-value">{{ 'Active' if measurements[-1].alarm_status else 'Inactive' }}</p>
+                    </div>
+                </div>
+            </div>
 
-<form method="POST" action="{{ url_for('add_house') }}">
-    <input type="text" name="house_name" placeholder="Enter house name" required>
-    <button type="submit">Add House</button>
-</form>
+            <button id="refreshButton" class="btn btn-secondary">Refresh</button>
 
-<h2>Existing Houses</h2>
-<ul>
-    {% for house in houses %}
-    <li>
-        {{ house }}
-        <form method="POST" action="{{ url_for('delete_house', house_name=house) }}" style="display:inline;">
-            <button type="submit">Delete</button>
-        </form>
-    </li>
-    {% endfor %}
-</ul>
-{% endif %}
-
-{% if is_admin %}
-<div>
-    <label for="select-house">Select a House:</label>
-    <select id="select-house" name="house" onchange="location.href = '{{ url_for('home') }}?house_name=' + this.value;">
-        <option value="">Select a house</option>
-        {% for house in houses %}
-        <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
-        {% endfor %}
-    </select>
+            <div class="table-container">
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                            <th>Alarm Status</th>
+                            <th>Number Detection</th>
+                            <th>Longitude</th>
+                            <th>Latitude</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataBody">
+                        {% for measurement in measurements %}
+                            <tr>
+                                <td>{{ measurement.id }}</td>
+                                <td>{{ measurement.temperature }}</td>
+                                <td>{{ measurement.humidity }}</td>
+                                <td>{{ 'Active' if measurement.alarm_status else 'Inactive' }}</td>
+                                <td>{{ measurement.number_detection }}</td>
+                                <td>{{ measurement.longitude }}</td>
+                                <td>{{ measurement.latitude }}</td>
+                                <td>{{ measurement.time }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <h3 class="chart-title">Temperature and Humidity Over Time</h3>
+            <div id="chart"></div>
+        {% else %}
+            <p class="no-data">No data available for the selected house.</p>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
 
-<h2>House Data</h2>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    function selectHouse() {
+        document.getElementById('house-select-form').submit();
+    }
 
-{% if measurements %}
-<table>
-    <tr>
-        <th>ID</th>
-        <th>Temperature</th>
-        <th>Humidity</th>
-        <th>Motion Detection</th>
-        <th>Longitude</th>
-        <th>Latitude</th>
-        <th>Time</th>
-    </tr>
-    {% for measurement in measurements %}
-    <tr>
-        <td>{{ measurement.id }}</td>
-        <td>{{ measurement.temperature }}</td>
-        <td>{{ measurement.humidity }}</td>
-        <td>{{ measurement.motionDetection }}</td>
-        <td>{{ measurement.longitude }}</td>
-        <td>{{ measurement.latitude }}</td>
-        <td>{{ measurement.time }}</td>
-    </tr>
-    {% endfor %}
-</table>
-{% else %}
-<p>No data available for the selected house.</p>
-{% endif %}
+    function displayHouse(house_name) {
+        window.location.href = `/display_house/${house_name}`;
+    }
+
+    function deleteHouse(event, house_name) {
+        event.preventDefault();
+        if (confirm('Are you sure you want to delete this house?')) {
+            fetch(`/delete_house/${house_name}`, {
+                method: 'POST'
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete house.');
+                }
+            });
+        }
+    }
+
+    async function fetchMeasurements(houseName) {
+        const response = await fetch(`/measurements/${houseName}`);
+        const data = await response.json();
+        return data;
+    }
+
+    async function fetchLatestMeasurements(houseName) {
+        const response = await fetch(`/latest_measurements/${houseName}`);
+        const data = await response.json();
+        return data;
+    }
+
+    function updateCards(latestMeasurement) {
+        const numberDetectionValue = document.getElementById('number-detection-value');
+        const alarmStatusValue = document.getElementById('alarm-status-value');
+
+        numberDetectionValue.textContent = latestMeasurement.number_detection;
+        alarmStatusValue.textContent = latestMeasurement.alarm_status ? 'Active' : 'Inactive';
+    }
+
+    function updateAlarmStatusCardBackground(alarmStatus) {
+        const alarmStatusCard = document.getElementById('alarm-status-card');
+        alarmStatusCard.style.backgroundColor = alarmStatus ? '#54f35c' : '#ff5a69';
+    }
+
+    function updateTable(measurements) {
+        const dataBody = document.getElementById('dataBody');
+        dataBody.innerHTML = '';
+        measurements.forEach(measurement => {
+            const row = dataBody.insertRow();
+            row.insertCell(0).innerText = measurement.id;
+            row.insertCell(1).innerText = measurement.temperature;
+            row.insertCell(2).innerText = measurement.humidity;
+            row.insertCell(3).innerText = measurement.alarm_status ? 'Active' : 'Inactive';
+            row.insertCell(4).innerText = measurement.number_detection;
+            row.insertCell(5).innerText = measurement.longitude;
+            row.insertCell(6).innerText = measurement.latitude;
+            row.insertCell(7).innerText = measurement.time;
+        });
+    }
+
+    async function renderChart() {
+        const houseName = document.getElementById('house_name')?.value || "{{ selected_house }}";
+        if (!houseName) return;
+        const measurements = await fetchMeasurements(houseName);
+        
+        if (measurements.error) {
+            console.error(measurements.error);
+            return;
+        }
+
+        const labels = measurements.map(m => new Date(m.time));
+        const temperatures = measurements.map(m => m.temperature);
+        const humidities = measurements.map(m => m.humidity);
+
+        const data = [
+            {
+                x: labels,
+                y: temperatures,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Temperature',
+                line: { color: 'rgb(255, 99, 132)' },
+            },
+            {
+                x: labels,
+                y: humidities,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Humidity',
+                line: { color: 'rgb(54, 162, 235)' },
+            }
+        ];
+
+        const layout = {
+            title: 'Temperature and Humidity Over Time',
+            xaxis: {
+                title: 'Time',
+                type: 'date',
+            },
+            yaxis: {
+                title: 'Value',
+            },
+        };
+
+        Plotly.newPlot('chart', data, layout);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        renderChart();
+
+        const houseName = document.getElementById('house_name')?.value || "{{ selected_house }}";
+        if (!houseName) return;
+
+        // Fetch latest measurements upon page load
+        const latestMeasurement = await fetchLatestMeasurements(houseName);
+        updateCards(latestMeasurement);
+        
+        // Update the alarm status card background color upon page load
+        updateAlarmStatusCardBackground(latestMeasurement.alarm_status);
+
+        // Add event listener for refresh button
+        const refreshButton = document.getElementById('refreshButton');
+        refreshButton.addEventListener('click', async () => {
+            const updatedMeasurement = await fetchLatestMeasurements(houseName);
+            updateCards(updatedMeasurement);
+            updateTable(await fetchMeasurements(houseName));
+            updateAlarmStatusCardBackground(updatedMeasurement.alarm_status);
+        });
+    });
+</script>
 {% endblock %}

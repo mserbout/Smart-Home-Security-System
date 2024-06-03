@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Historical Data{% endblock %}
+
+{% block content %}
+<div class="historical-data-container">
+    <h1 class="title">Historical Data for {{ selected_house }}</h1>
+    
+    {% if is_admin %}
+        <form method="get" action="/historical_data" id="house-select-form">
+            <label for="house_name" class="control-label">Select House:</label>
+            <select name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
+                <option value="" disabled selected>Select a house</option>
+                {% for house in houses %}
+                    <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    {% else %}
+        <p>House: {{ selected_house }}</p>
+    {% endif %}
+    
+    <label for="time_range" class="control-label">Select Time Range:</label>
+    <select id="time_range" class="select-time-range" onchange="updateCharts()">
+        <option value="hourly" {% if time_range == 'hourly' %}selected{% endif %}>Hourly</option>
+        <option value="daily" {% if time_range == 'daily' %}selected{% endif %}>Daily</option>
+        <option value="weekly" {% if time_range == 'weekly' %}selected{% endif %}>Weekly</option>
+    </select>
+
+    <div id="statistics" class="statistics">
+        <h3>Statistical Information</h3>
+        <p id="avg_temp">Average Temperature: N/A</p>
+        <p id="max_humidity">Highest Humidity Level: N/A</p>
+        <p id="motion_freq">Frequency of Motion Events: N/A</p>
+        <p id="min_temp">Minimum Temperature: N/A</p>
+        <p id="max_temp">Maximum Temperature: N/A</p>
+        <p id="min_humidity">Lowest Humidity Level: N/A</p>
+    </div>
+    
+    {% if measurements %}
+        <h3 class="chart-title">Temperature and Humidity Over Time</h3>
+        <div id="chart"></div>
+        
+        <h3 class="chart-title">Motion Events Over Time</h3>
+        <div id="motion_chart"></div>
+        
+        <h3 class="chart-title">Geographical Data</h3>
+        <div id="map" style="height: 400px;"></div>
+        
+        <div class="table-container">
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Temperature</th>
+                        <th>Humidity</th>
+                        <th>Alarm Status</th>
+                        <th>Number Detection</th>
+                        <th>Longitude</th>
+                        <th>Latitude</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="dataBody">
+                    {% for measurement in measurements %}
+                        <tr>
+                            <td>{{ measurement.id }}</td>
+                            <td>{{ measurement.temperature }}</td>
+                            <td>{{ measurement.humidity }}</td>
+                            <td>{{ 'Active' if measurement.alarm_status else 'Inactive' }}</td>
+                            <td>{{ measurement.number_detection }}</td>
+                            <td>{{ measurement.longitude }}</td>
+                            <td>{{ measurement.latitude }}</td>
+                            <td>{{ measurement.time }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <button onclick="downloadCSV()">Download Data as CSV</button>
+    {% else %}
+        <p class="no-data">No data available for the selected house.</p>
+    {% endif %}
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+    function selectHouse() {
+        document.getElementById('house-select-form').submit();
+    }
+
+    function aggregateMeasurements(measurements, timeRange) {
+        const groupedData = {};
+        measurements.forEach(measurement => {
+            const date = new Date(measurement.time);
+            let key;
+            if (timeRange === 'hourly') {
+                key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:00`;
+            } else if (timeRange === 'daily') {
+                key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+            } else if (timeRange === 'weekly') {
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                key = `${weekStart.getFullYear()}-${weekStart.getMonth() + 1}-${weekStart.getDate()}`;
+            }
+            if (!groupedData[key]) {
+                groupedData[key] = { temperatures: [], humidities: [], motionEvents: 0 };
+            }
+            groupedData[key].temperatures.push(measurement.temperature);
+            groupedData[key].humidities.push(measurement.humidity);
+            groupedData[key].motionEvents += measurement.number_detection;
+        });
+
+        return Object.keys(groupedData).map(key => ({
+            time: key,
+            temperature: groupedData[key].temperatures.reduce((a, b) => a + b, 0) / groupedData[key].temperatures.length,
+            humidity: groupedData[key].humidities.reduce((a, b) => a + b, 0) / groupedData[key].humidities.length,
+            motionEvents: groupedData[key].motionEvents
+        }));
+    }
+
+    async function fetchMeasurements(houseName) {
+        const response = await fetch(`/measurements/${houseName}`);
+        const data = await response.json();
+        return data;
+    }
+
+    function calculateStatistics(aggregatedData) {
+        if (!aggregatedData.length) return {};
+
+        const temperatures = aggregatedData.map(d => d.temperature);
+        const humidities = aggregatedData.map(d => d.humidity);
+        const motionEvents = aggregatedData.map(d => d.motionEvents);
+
+        const avgTemp = temperatures.reduce((sum, temp) => sum + temp, 0) / temperatures.length;
+        const maxHumidity = Math.max(...humidities);
+        const motionFreq = motionEvents.reduce((sum, events) => sum + events, 0);
+        const minTemp = Math.min(...temperatures);
+        const maxTemp = Math.max(...temperatures);
+        const minHumidity = Math.min(...humidities);
+
+        return {
+            avgTemp: avgTemp.toFixed(2),
+            maxHumidity,
+            motionFreq,
+            minTemp,
+            maxTemp,
+            minHumidity
+        };
+    }
+
+    function displayStatistics(stats) {
+        document.getElementById('avg_temp').innerText = `Average Temperature: ${stats.avgTemp} °C`;
+        document.getElementById('max_humidity').innerText = `Highest Humidity Level: ${stats.maxHumidity} %`;
+        document.getElementById('motion_freq').innerText = `Frequency of Motion Events: ${stats.motionFreq}`;
+        document.getElementById('min_temp').innerText = `Minimum Temperature: ${stats.minTemp} °C`;
+        document.getElementById('max_temp').innerText = `Maximum Temperature: ${stats.maxTemp} °C`;
+        document.getElementById('min_humidity').innerText = `Lowest Humidity Level: ${stats.minHumidity} %`;
+    }
+
+    async function renderCharts() {
+        const houseName = document.getElementById('house_name')?.value || "{{ selected_house }}";
+        const timeRange = document.getElementById('time_range').value;
+        if (!houseName) return;
+        const measurements = await fetchMeasurements(houseName);
+
+        if (measurements.error) {
+            console.error(measurements.error);
+            return;
+        }
+
+        const aggregatedData = aggregateMeasurements(measurements, timeRange);
+        const stats = calculateStatistics(aggregatedData);
+        displayStatistics(stats);
+
+        const labels = aggregatedData.map(m => m.time);
+        const temperatures = aggregatedData.map(m => m.temperature);
+        const humidities = aggregatedData.map(m => m.humidity);
+        const motionEvents = aggregatedData.map(m => m.motionEvents);
+
+        const tempHumidityData = [
+            {
+                x: labels,
+                y: temperatures,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Temperature',
+                line: { color: 'rgb(255, 99, 132)' },
+            },
+            {
+                x: labels,
+                y: humidities,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Humidity',
+                line: { color: 'rgb(54, 162, 235)' },
+            },
+        ];
+
+        const motionData = [
+            {
+                x: labels,
+                y: motionEvents,
+                type: 'bar',
+                name: 'Motion Events',
+                marker: { color: 'rgb(75, 192, 192)' },
+            },
+        ];
+
+        Plotly.newPlot('chart', tempHumidityData, { title: `Temperature and Humidity (${timeRange})` });
+        Plotly.newPlot('motion_chart', motionData, { title: `Motion Events (${timeRange})` });
+
+        // Adding map visualization
+        const map = L.map('map').setView([measurements[0].latitude, measurements[0].longitude], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        measurements.forEach(measurement => {
+            L.marker([measurement.latitude, measurement.longitude]).addTo(map)
+                .bindPopup(`Temp: ${measurement.temperature}°C<br>Humidity: ${measurement.humidity}%<br>Time: ${measurement.time}`)
+                .openPopup();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderCharts();
+    });
+
+    function updateCharts() {
+        renderCharts();
+    }
+
+    function downloadCSV() {
+        const measurements = {{ measurements|safe }};
+        const csvContent = "data:text/csv;charset=utf-8," + 
+            ["ID,Temperature,Humidity,Alarm Status,Number Detection,Longitude,Latitude,Time"]
+            .concat(measurements.map(m => 
+                `${m.id},${m.temperature},${m.humidity},${m.alarm_status ? 'Active' : 'Inactive'},${m.number_detection},${m.longitude},${m.latitude},${m.time}`
+            )).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `historical_data_${new Date().toISOString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+{% endblock %}

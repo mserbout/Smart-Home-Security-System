@@ -6,21 +6,44 @@
     <title>{% block title %}My Website{% endblock %}</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style_base.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> <!-- Font Awesome for icons -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style/home.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='users.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='users.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <style>
+        
+    </style>
 </head>
 <body>
-    <div class="navbar" id="navbar">
-        <a href="#" onclick="toggleNav()"><i class="fas fa-bars"></i></a>
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
+    <span class ="bbb" >  
+    <button class="toggle-btn" id="open-btn" onclick="toggleNav()"><i class="fas fa-bars"></i></button>
+    <button class="toggle-btn" id="close-btn" onclick="toggleNav()" style="display: none;"><i class="fas fa-times"></i></button>
+        <div class="navbar" id="navbar">
+        <a href="/" class="nav-item"><i class="fas fa-home"></i> Home</a>
+        <a href="/about" class="nav-item"><i class="fas fa-info-circle"></i> About</a>
+        <a href="/contact" class="nav-item"><i class="fas fa-envelope"></i> Contact</a>
         {% if session.get('user_id') %}
-            <span>Welcome, {{ session.get('username') }}!</span>
-            <a href="{{ url_for('logout') }}">Logout</a>
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('manage_users') }}" class="nav-item"><i class="fas fa-users-cog"></i> Manage Users</a>
+            {% endif %}
+            <span class="welcome-message">Welcome, {{ session.get('username') }}!</span>
+            <a href="{{ url_for('logout') }}" class="nav-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <a href="{{ url_for('historical_data') }}">Historical Data Analysis</a>
+        {% else %}
+            <a href="{{ url_for('login') }}" class="nav-item"><i class="fas fa-sign-in-alt"></i> Login</a>
         {% endif %}
     </div>
-    <button class="toggle-btn" onclick="toggleNav()"><i class="fas fa-times"></i></button>
-    <div class="content">
+    <div class="content" id="content">
         {% block content %}{% endblock %}
     </div>
 
@@ -39,17 +62,49 @@
     <script>
         function toggleNav() {
             var navbar = document.getElementById("navbar");
+            var content = document.getElementById("content");
             navbar.classList.toggle("active");
+            content.classList.toggle("shifted");
         }
-    </script>
 
-    <script>
         document.addEventListener("DOMContentLoaded", function() {
             const flashes = document.querySelectorAll('.flashes li');
             flashes.forEach(function(flash) {
                 alert(flash.textContent);
             });
         });
+
+
+        function toggleNav() {
+            var navbar = document.getElementById("navbar");
+            var content = document.getElementById("content");
+            var openBtn = document.getElementById("open-btn");
+            var closeBtn = document.getElementById("close-btn");
+            navbar.classList.toggle("active");
+            content.classList.toggle("shifted");
+            if (navbar.classList.contains("active")) {
+                openBtn.style.display = "none";
+                closeBtn.style.display = "block";
+            } else {
+                openBtn.style.display = "block";
+                closeBtn.style.display = "none";
+            }
+
+            document.addEventListener('click', function(event) {
+                var isClickInside = navbar.contains(event.target);
+                var isClickOnOpenBtn = openBtn.contains(event.target);
+                var isClickOnCloseBtn = closeBtn.contains(event.target);
+            
+                if (!isClickInside && !isClickOnOpenBtn && !isClickOnCloseBtn && navbar.classList.contains('active')) {
+                    toggleNav();
+                }
+            });
+            
+        }
+
+        
+        
     </script>
+</span>
 </body>
 </html>
