@@ -357,5 +357,35 @@ Plotly.newPlot('chart', data, layout);
     });
 });
 
+/*
+
+// Connessione al broker MQTT
+const client = mqtt.connect('wss://35.192.204.119:1883');
+
+// Event listener per la connessione
+client.on('connect', function () {
+    console.log('Connected to MQTT broker');
+    client.subscribe('data/limit/Bolzano'); // Sostituisci con il topic corretto
+});
+
+// Event listener per i messaggi
+client.on('message', function (topic, message) {
+    // Converte il messaggio da Buffer a stringa e poi a JSON
+    const data = JSON.parse(message.toString());
+
+    // Aggiorna l'interfaccia utente con i dati ricevuti
+    document.getElementById('current_max_temp').innerText = data.limitTemperatureHigh;
+    document.getElementById('current_min_temp').innerText = data.limitTemperatureLow;
+    document.getElementById('current_max_hum').innerText = data.limitHumidityHigh;
+    document.getElementById('current_min_hum').innerText = data.limitHumidityLow;
+});
+
+// Event listener per errori
+client.on('error', function (error) {
+    console.error('MQTT Error:', error);
+});
+
+*/
+
 </script>
 {% endblock %}
