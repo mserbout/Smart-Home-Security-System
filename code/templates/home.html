@@ -81,6 +81,25 @@
                     <button id="startAlarmButton" class="btn btn-danger">Start Alarm</button>
                     <button id="stopAlarmButton" class="btn btn-success">Stop Alarm</button>
                 </div>
+                <div class="limit-temp-hum">
+                    <div class="limit-field">
+                        <label for="set_max_temp" class="temp-max">Set max temperature limit:</label>
+                        <input class="input_max_temp" type="number" name="max_temp" id="set_max_temp" required>
+                    </div>
+                    <div class="limit-field">
+                        <label for="set_min_temp" class="temp-min">Set min temperature limit:</label>
+                        <input class="input_min_temp" type="number" name="min_temp" id="set_min_temp" required>
+                    </div>
+                    <div class="limit-field">
+                        <label for="set_max_hum" class="hum-max">Set max humidity limit:</label>
+                        <input class="input_max_hum" type="number" name="max_hum" id="set_max_hum" required>
+                    </div>
+                    <div class="limit-field">
+                        <label for="set_min_hum" class="hum-min">Set min humidity limit:</label>
+                        <input class="input_min_hum" type="number" name="min_hum" id="set_min_hum" required>
+                    </div>
+                    <button id="limitButton" class="button-limit">Change the limits</button>
+                </div>
             </div>
 
             <button id="refreshButton" class="btn btn-secondary">Refresh</button>
@@ -301,5 +320,42 @@ Plotly.newPlot('chart', data, layout);
                 }
             });
     });
+
+    document.getElementById('limitButton').addEventListener('click', function() {
+    const maxTemp = document.getElementById('set_max_temp').value;
+    const minTemp = document.getElementById('set_min_temp').value;
+    const maxHum = document.getElementById('set_max_hum').value;
+    const minHum = document.getElementById('set_min_hum').value;
+    const houseName = document.getElementById('house_name')?.value || "{{ selected_house }}";
+
+    // Controllo se tutti i campi sono riempiti
+    if (!maxTemp || !minTemp || !maxHum || !minHum) {
+        alert('Please, fill all the limit fields to send them.');
+        return;
+    }
+
+    fetch('/set_limits', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            house_name: houseName,
+            max_temp: maxTemp,
+            min_temp: minTemp,
+            max_hum: maxHum,
+            min_hum: minHum
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Limits set successfully');
+        } else {
+            alert('Failed to set limits');
+        }
+    });
+});
+
 </script>
 {% endblock %}

@@ -210,6 +210,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
     limitTemperatureLow = docLimit["limitTemperatureLow"];
     limitHumidityHigh = docLimit["limitHumidityHigh"];
     limitHumidityLow = docLimit["limitHumidityLow"];
+
+    Serial.println("max")
   }
 }
 

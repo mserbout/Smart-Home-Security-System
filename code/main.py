@@ -5,6 +5,7 @@ from google.cloud.exceptions import NotFound
 import uuid
 import bcrypt
 import paho.mqtt.client as mqtt
+import json
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -205,6 +206,34 @@ def stop_alarm(house_name):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/set_limits', methods=['POST'])
+def set_limits():
+    data = request.get_json()
+    house_name = data.get('house_name')
+    max_temp = data.get('max_temp')
+    min_temp = data.get('min_temp')
+    max_hum = data.get('max_hum')
+    min_hum = data.get('min_hum')
+
+    if not house_name or not all([max_temp, min_temp, max_hum, min_hum]):
+        return jsonify({'success': False, 'error': 'Missing data'})
+
+    try:
+        mqtt_client.connect(mqtt_broker, mqtt_port, 60)
+
+        data = {
+            "limitTemperatureHigh": max_temp,
+            "limitTemperatureLow": min_temp,
+            "limitHumidityHigh": max_hum,
+            "limitHumidityLow": min_hum
+        }
+
+        msg = json.dumps(data)
+
+        mqtt_client.publish(f'cmd/limit/{house_name}', msg)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/about')
 def about():

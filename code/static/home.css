@@ -190,9 +190,20 @@ align-items: center;
 .div-container {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Adjust this value to increase or decrease the space between the divs */
+    gap: 10px; /* Adjust this value to increase or decrease the space between the divs */
 }
 
+.limit-temp-hum {
+    display: flex;
+    flex-direction: column;
+}
+.limit-field {
+    margin-bottom: 10px;
+}
+.limit-field label {
+    display: block;
+    margin-bottom: 5px;
+}
 
 .row {
     display: flex;
