@@ -26,6 +26,11 @@ String status;
 String current_datetime;
 float latitude_home = 46.48689;
 float longitude_home = 11.32225;
+float limitTemperatureHigh = 200;
+float limitTemperatureLow = -200;
+float limitHumidityHigh = 200;
+float limitHumidityLow = -200;
+
 
 // Update these with values suitable for your network.
 const char* ssid = "PTVTELECOM_bQPS";
@@ -39,8 +44,10 @@ String topic_PUB_telegram = "data/telegram/Bolzano";
 String topic_PUB_bigQuery = "data/google/Bolzano";
 String topic_PUB_website = "data/website/Bolzano";
 String topic_PUB_coordinates = "data/google/coordinates";
+String topic_PUB_limit = "data/limit/Bolzano";
 String topic_SUB_alarm = "cmd/alarm/Bolzano"; // Subscription topic
 String topic_SUB_status = "cmd/status/Bolzano"; // Subscription topic
+String topic_SUB_limit = "cmd/limit/Bolzano";
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
@@ -64,6 +71,9 @@ void conecta_mqtt() {
 
       mqtt_client.subscribe(topic_SUB_status.c_str());
       Serial.println("Subscribed to topic: " + topic_SUB_status);
+
+      mqtt_client.subscribe(topic_SUB_limit.c_str());
+      Serial.println("Subscribed to topic: " + topic_SUB_limit);
     } else {
       Serial.println("ERROR:" + String(mqtt_client.state()) + " retrying in 5s");
       delay(5000);
@@ -183,6 +193,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
     
   }
   // Handle the received message here
+
+  if (String(topic) == topic_SUB_limit) {
+    payload[length] = '\0';
+    DynamicJsonDocument docLimit(256);
+    //Deserialize the message to obtain all the data
+    DeserializationError error = deserializeJson(docLimit, message);
+  
+    if (error) {
+      Serial.print(("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+
+    limitTemperatureHigh = docLimit["limitTemperatureHigh"];
+    limitTemperatureLow = docLimit["limitTemperatureLow"];
+    limitHumidityHigh = docLimit["limitHumidityHigh"];
+    limitHumidityLow = docLimit["limitHumidityLow"];
+  }
 }
 
 void setup() {
@@ -224,6 +252,8 @@ void setup() {
 
 unsigned long last_message = 0;
 unsigned long last_alarm_message = 0;
+unsigned long last_limit_message = 0;
+
 void loop() {
   if (!mqtt_client.connected()) conecta_mqtt();
   mqtt_client.loop();
@@ -231,9 +261,7 @@ void loop() {
   unsigned long now = millis();
 
   bool sensorValue = digitalRead(PIN_MOTION_SENSOR);
-  //Serial.print("Sensor Value: ");
-  //Serial.println(sensorValue);
-  //Serial.println(timeClient.getFormattedTime());
+  
   if (alarm) {
     if (sensorValue) {
       tone(PIN_SPEAKER, 440);
@@ -245,7 +273,7 @@ void loop() {
     }
   }
 
-  if (alarm && (number_detection > 0) && (now - last_alarm_message >= 20000)) {
+  if (alarm && (number_detection > 0) && (now - last_alarm_message >= 10000)) {
     StaticJsonDocument<200> docAlarm;
     
     humidity = dht.getHumidity();
@@ -297,4 +325,40 @@ void loop() {
     Serial.println("Payload : " + msgBigQuery);
     mqtt_client.publish(topic_PUB_bigQuery.c_str(), msgBigQuery.c_str());
   }
+
+  if (now - last_limit_message >= 10000){
+    last_limit_message = now;
+    humidity = dht.getHumidity();
+    temperature = dht.getTemperature();
+
+    if(temperature > limitTemperatureHigh || temperature < limitTemperatureLow || humidity > limitHumidityHigh || humidity < limitHumidityLow){
+      StaticJsonDocument<200> docLimitMSG;
+      current_datetime = epochToDateTimeString(timeClient.getEpochTime());
+      
+      if(temperature > limitTemperatureHigh){
+        docLimitMSG["alarm_temperature"] = "too high!";
+        docLimitMSG["temperature"] = temperature;
+      } else if(temperature < limitTemperatureLow){
+        docLimitMSG["alarm_temperature"] = "too low!";
+        docLimitMSG["temperature"] = temperature;  
+      } else if(humidity > limitHumidityHigh){
+        docLimitMSG["alarm_humidity"] = "too high!";
+        docLimitMSG["humidity"] = humidity;
+      } else if(humidity < limitHumidityLow){
+        docLimitMSG["alarm_humidity"] = "too low!";
+        docLimitMSG["humidity"] = humidity;
+      }
+
+      docLimitMSG["time"] = current_datetime;
+      
+      String msgLimitWebsite;
+      serializeJson(docLimitMSG, msgLimitWebsite);
+      Serial.println();
+      Serial.println("Topic   : " + topic_SUB_limit);
+      Serial.println("Payload : " + msgLimitWebsite);
+      mqtt_client.publish(topic_SUB_limit.c_str(), msgLimitWebsite.c_str()); 
+    
+    }
+  }
+  
 }
