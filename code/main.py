@@ -37,7 +37,7 @@ def create_house_table(house_name):
     
     table_id = f"{project_id}.{dataset_id}.{house_name}"
     table = bigquery.Table(table_id, schema=schema)
-    table = bigquery_client.create_table(table)  # Make an API request
+    taget_measurementsble = bigquery_client.create_table(table)  # Make an API request
     return table
 
 # Function to check if a house (table) exists in BigQuery
@@ -55,7 +55,7 @@ def delete_house_table(house_name):
     bigquery_client.delete_table(table_id, not_found_ok=True)  # Make an API request
 
 # Function to fetch measurements from BigQuery for a specific house
-def fetch_measurements(house_name, limit=15):
+def fetch_measurements(house_name, limit=50):
     query = f"""
         SELECT id, temperature, humidity, alarm_status, number_detection, longitude, latitude, time
         FROM `{project_id}.{dataset_id}.{house_name}`
@@ -65,7 +65,7 @@ def fetch_measurements(house_name, limit=15):
     query_job = bigquery_client.query(query)
     results = query_job.result()
     measurements = [dict(row) for row in results]
-    measurements.reverse()  # Reverse to get the oldest data first
+    # measurements.reverse()  # Reverse to get the oldest data first
     return measurements
 
 # Function to convert measurements with datetime objects to strings
@@ -113,7 +113,7 @@ def home():
     if selected_house:
         try:
             if house_table_exists(selected_house):
-                measurements = fetch_measurements(selected_house, limit=15)
+                measurements = fetch_measurements(selected_house, limit=50)
             else:
                 flash(f'House {selected_house} does not exist.', 'error')
         except Exception as e:
@@ -179,7 +179,7 @@ def delete_house(house_name):
 @app.route('/display_house/<house_name>')
 def display_house(house_name):
     if house_table_exists(house_name):
-        measurements = fetch_measurements(house_name, limit=100)
+        measurements = fetch_measurements(house_name, limit=50)
         tables = bigquery_client.list_tables(dataset_id)
         houses = [table.table_id.split('.')[-1] for table in tables]
         return render_template('home.html', measurements=measurements, houses=houses, selected_house=house_name, is_admin=session.get('is_admin'))
@@ -247,14 +247,31 @@ def logout():
 @app.route('/measurements/<house_name>')
 def get_measurements(house_name):
     try:
+        # time_range = request.args.get('time_range', 'hourly')
         if house_table_exists(house_name):
-            measurements = fetch_measurements(house_name, limit=15)
+            measurements = fetch_measurements(house_name, limit=50)
+
             measurements = convert_measurements(measurements)
             return jsonify(measurements)
         else:
             return jsonify({"error": "House does not exist"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/measurements_plots/<house_name>')
+def get_measurementsPlots(house_name):
+    try:
+        time_range = request.args.get('time_range', 'hourly')
+        if house_table_exists(house_name):
+            measurements_plot = fetch_measurements_by_time_range(house_name, time_range)
+
+            measurements_plot = convert_measurements(measurements_plot)
+            return jsonify(measurements_plot)
+        else:
+            return jsonify({"error": "House does not exist"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 def fetch_latest_measurement(house_name):
     query = f"""
@@ -296,10 +313,12 @@ def historical_data():
     time_range = request.args.get('time_range', 'hourly')
 
     measurements = []
+    measurements1 = []  # Initialize measurements1 here
     if selected_house:
         try:
             if house_table_exists(selected_house):
                 measurements = fetch_measurements_by_time_range(selected_house, time_range)
+                measurements1 = fetch_measurements(selected_house, limit=50)
             else:
                 flash(f'House {selected_house} does not exist.', 'error')
         except Exception as e:
@@ -309,25 +328,40 @@ def historical_data():
     tables = bigquery_client.list_tables(dataset_id)
     houses = [table.table_id.split('.')[-1] for table in tables] if is_admin else [idHouse]
 
-    return render_template('historical_data.html', measurements=measurements, houses=houses, is_admin=is_admin, selected_house=selected_house, time_range=time_range)
+    return render_template('historical_data.html', measurements=measurements, measurements1=measurements1, houses=houses, is_admin=is_admin, selected_house=selected_house, time_range=time_range)
+    
+    # Admin sees all houses, user sees only their house
+    tables = bigquery_client.list_tables(dataset_id)
+    houses = [table.table_id.split('.')[-1] for table in tables] if is_admin else [idHouse]
 
-def fetch_measurements_by_time_range(house_name, time_range):
-    time_filter = {
-        'hourly': 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)',
-        'daily': 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)',
-        'weekly': 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 WEEK)'
-    }.get(time_range, 'TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)')
+    return render_template('historical_data.html', measurements=measurements,measurements1 = measurements1, houses=houses, is_admin=is_admin, selected_house=selected_house, time_range=time_range)
+
+def fetch_measurements_by_time_range(house_name, time_range, limit=50):
+    group_by_clause = {
+        'hourly': "FORMAT_TIMESTAMP('%Y-%m-%d %H:00:00', time)",
+        'daily': "FORMAT_TIMESTAMP('%Y-%m-%d', time)",
+        'weekly': "FORMAT_TIMESTAMP('%Y-%U', time)",
+        'monthly': "FORMAT_TIMESTAMP('%Y-%m', time)",
+        'yearly': "FORMAT_TIMESTAMP('%Y', time)"
+    }.get(time_range, "FORMAT_TIMESTAMP('%Y-%m-%d %H:00:00', time)")
 
     query = f"""
-        SELECT id, temperature, humidity, alarm_status, number_detection, longitude, latitude, time
+        SELECT 
+            {group_by_clause} as time_group,
+            AVG(temperature) as avg_temperature,
+            AVG(humidity) as avg_humidity,
+            AVG(number_detection) as avg_number_detection,
+            
         FROM `{project_id}.{dataset_id}.{house_name}`
-        WHERE time > {time_filter}
-        ORDER BY time DESC
+        GROUP BY time_group
+        ORDER BY time_group DESC
+        LIMIT {limit}
     """
     query_job = bigquery_client.query(query)
     results = query_job.result()
     measurements = [dict(row) for row in results]
     return measurements
+
 
 @app.route('/historical_measurements/<house_name>')
 def get_historical_measurements(house_name):

@@ -104,6 +104,7 @@
     </div>
 </div>
 
+<iframe width="600" height="450" src="https://lookerstudio.google.com/embed/reporting/2352844e-2c44-4e32-91c4-26b8c44398bd/page/tEnnC" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <script>
@@ -132,7 +133,9 @@
 
     async function fetchMeasurements(houseName) {
         const response = await fetch(`/measurements/${houseName}`);
+        console.log(response)
         const data = await response.json();
+        console.log(data)
         return data;
     }
 

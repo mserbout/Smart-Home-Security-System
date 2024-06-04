@@ -24,7 +24,8 @@ volatile float humidity;
 volatile float temperature;
 String status;
 String current_datetime;
-
+float latitude_home = 46.48689;
+float longitude_home = 11.32225;
 
 // Update these with values suitable for your network.
 const char* ssid = "PTVTELECOM_bQPS";
@@ -34,12 +35,12 @@ const char* password = "REHb3RSGTQCQ";
 const char* mqtt_server = "35.192.204.119";
 
 String ID_PLACA;
-String topic_PUB_telegram = "data/telegram/Malaga";
-String topic_PUB_bigQuery = "data/google/Malaga";
-String topic_PUB_website = "data/website/Malaga";
-String topic_PUB_coordinates = "data/coordinates/Malaga";
-String topic_SUB_alarm = "cmd/alarm/Malaga"; // Subscription topic
-String topic_SUB_status = "cmd/status/Malaga"; // Subscription topic
+String topic_PUB_telegram = "data/telegram/Bolzano";
+String topic_PUB_bigQuery = "data/google/Bolzano";
+String topic_PUB_website = "data/website/Bolzano";
+String topic_PUB_coordinates = "data/google/coordinates";
+String topic_SUB_alarm = "cmd/alarm/Bolzano"; // Subscription topic
+String topic_SUB_status = "cmd/status/Bolzano"; // Subscription topic
 
 void conecta_wifi() {
   Serial.println("Connecting to " + String(ssid));
@@ -205,8 +206,9 @@ void setup() {
   digitalWrite(PIN_RED_LED, HIGH);
   
   StaticJsonDocument<200> docCoordinates;
-  docCoordinates["longitude"] = -4.426812;
-  docCoordinates["latitude"] = 36.713397;
+  docCoordinates["idHouse"] = "Bolzano";
+  docCoordinates["longitude"] = longitude_home;
+  docCoordinates["latitude"] = latitude_home;
   String msgCoordinates;
   serializeJson(docCoordinates, msgCoordinates);
 
@@ -257,8 +259,8 @@ void loop() {
     docAlarm["humidity"] = humidity;
     docAlarm["alarm_status"] = alarm;
     docAlarm["number_detection"] = number_detection;
-    docAlarm["longitude"] = -4.426812;
-    docAlarm["latitude"] = 36.713397;
+    docAlarm["longitude"] = longitude_home;
+    docAlarm["latitude"] = latitude_home;
     docAlarm["time"] = current_datetime;
 
     String msgAlarm;
@@ -270,7 +272,7 @@ void loop() {
     
   }
 
-  if (now - last_message >= 2000) {
+  if (now - last_message >= 20000) {
     StaticJsonDocument<200> docStatus;
     
     humidity = dht.getHumidity();
@@ -284,8 +286,8 @@ void loop() {
     docStatus["humidity"] = humidity;
     docStatus["alarm_status"] = alarm;
     docStatus["number_detection"] = number_detection;
-    docStatus["longitude"] = -4.426812;
-    docStatus["latitude"] = 36.713397;
+    docStatus["longitude"] = longitude_home;
+    docStatus["latitude"] = latitude_home;
     docStatus["time"] = current_datetime;
 
     String msgBigQuery;

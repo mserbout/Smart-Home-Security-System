@@ -25,6 +25,8 @@
         <option value="hourly" {% if time_range == 'hourly' %}selected{% endif %}>Hourly</option>
         <option value="daily" {% if time_range == 'daily' %}selected{% endif %}>Daily</option>
         <option value="weekly" {% if time_range == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if time_range == 'monthly' %}selected{% endif %}>Monthly</option>
+        <option value="yearly" {% if time_range == 'yearly' %}selected{% endif %}>Yearly</option>
     </select>
 
     <div id="statistics" class="statistics">
@@ -37,7 +39,7 @@
         <p id="min_humidity">Lowest Humidity Level: N/A</p>
     </div>
     
-    {% if measurements %}
+    {% if measurements1 %}
         <h3 class="chart-title">Temperature and Humidity Over Time</h3>
         <div id="chart"></div>
         
@@ -59,7 +61,7 @@
                     </tr>
                 </thead>
                 <tbody id="dataBody">
-                    {% for measurement in measurements %}
+                    {% for measurement in measurements1 %}
                         <tr>
                             <td>{{ measurement.id }}</td>
                             <td>{{ measurement.temperature }}</td>
@@ -74,7 +76,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <button onclick="downloadCSV()">Download Data as CSV</button>
     {% else %}
         <p class="no-data">No data available for the selected house.</p>
@@ -90,7 +92,7 @@
     function aggregateMeasurements(measurements, timeRange) {
         const groupedData = {};
         measurements.forEach(measurement => {
-            const date = new Date(measurement.time);
+            const date = new Date(measurement.time_group);
             let key;
             if (timeRange === 'hourly') {
                 key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:00`;
@@ -100,13 +102,22 @@
                 const weekStart = new Date(date);
                 weekStart.setDate(date.getDate() - date.getDay());
                 key = `${weekStart.getFullYear()}-${weekStart.getMonth() + 1}-${weekStart.getDate()}`;
+            } else if (timeRange === 'monthly') {
+                key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+            } else if (timeRange === 'yearly') {
+                key = `${date.getFullYear()}`;
             }
             if (!groupedData[key]) {
                 groupedData[key] = { temperatures: [], humidities: [], motionEvents: 0 };
             }
-            groupedData[key].temperatures.push(measurement.temperature);
-            groupedData[key].humidities.push(measurement.humidity);
-            groupedData[key].motionEvents += measurement.number_detection;
+            
+            groupedData[key].temperatures.push(measurement.avg_temperature);
+            console.log(measurement.avg_temperature)
+            groupedData[key].humidities.push(measurement.avg_humidity);
+            console.log(measurement.avg_humidity)
+            groupedData[key].motionEvents += measurement.avg_number_detection;
+            console.log(measurement.avg_number_detection)
+
         });
 
         return Object.keys(groupedData).map(key => ({
@@ -121,6 +132,11 @@
         const response = await fetch(`/measurements/${houseName}`);
         const data = await response.json();
         return data;
+    }
+    async function fetchMeasurementsPlots(houseName) {
+        const response_plot = await fetch(`/measurements_plots/${houseName}`);
+        const data_plot = await response_plot.json();
+        return data_plot;
     }
 
     function calculateStatistics(aggregatedData) {
@@ -160,8 +176,8 @@
         const houseName = document.getElementById('house_name')?.value || "{{ selected_house }}";
         const timeRange = document.getElementById('time_range').value;
         if (!houseName) return;
-        const measurements = await fetchMeasurements(houseName);
-
+        const measurements = await fetchMeasurementsPlots(houseName);
+        console.log(measurements)
         if (measurements.error) {
             console.error(measurements.error);
             return;
@@ -175,7 +191,8 @@
         const temperatures = aggregatedData.map(m => m.temperature);
         const humidities = aggregatedData.map(m => m.humidity);
         const motionEvents = aggregatedData.map(m => m.motionEvents);
-
+       console.log(aggregatedData)
+       
         const tempHumidityData = [
             {
                 x: labels,
