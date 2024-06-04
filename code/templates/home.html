@@ -3,41 +3,61 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
+
+
+
+
+
 <div class="home-container">
     <h1 class="title">Welcome to Smart Home Security System</h1>
+    <div class="row">
+        <div class="column left">       
+            {% if is_admin %}
+            <div class="admin-controls">
+                <form method="get" action="/" id="house-select-form">
+                    <label for="house_name" class="control-label">Select House:</label>
+                    <select  name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
+                        <option value="" disabled selected>Select a house</option>
+                        {% for house in houses %}
+                            <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                
+                <form class="margin_topd" method="post" action="/add_house">
+                    <label for="new_house_name" class="control-label">Add New House:</label>
+                    <input class="inpout_house" type="text" name="house_name" id="new_house_name" placeholder="Enter house name" required>
+                    <button type="submit" class="btn btn-primary">Add House</button>
+                </form>
+            </div>
     
-    {% if is_admin %}
-        <div class="admin-controls">
-            <form method="get" action="/" id="house-select-form">
-                <label for="house_name" class="control-label">Select House:</label>
-                <select name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
-                    <option value="" disabled selected>Select a house</option>
+    
+            <div class="house-list">
+                <h2 class="title_table" >House List</h2>
+                <ul class="house-list-ul">
                     {% for house in houses %}
-                        <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
+                        <li class="house-list-item">
+                            <span class="house-name" onclick="displayHouse('{{ house }}')" style="cursor:pointer;">{{ house }}</span>
+                            <form method="post" action="/delete_house/{{ house }}" class="inline-form" onsubmit="return deleteHouse(event, '{{ house }}')">
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </li>
                     {% endfor %}
-                </select>
-            </form>
-            
-            <form method="post" action="/add_house">
-                <label for="new_house_name" class="control-label">Add New House:</label>
-                <input type="text" name="house_name" id="new_house_name" placeholder="Enter house name" required>
-                <button type="submit" class="btn btn-primary">Add House</button>
-            </form>
+                </ul>
+            </div>
         </div>
 
-        <div class="house-list">
-            <h2>House List</h2>
-            <ul class="house-list-ul">
-                {% for house in houses %}
-                    <li class="house-list-item">
-                        <span class="house-name" onclick="displayHouse('{{ house }}')" style="cursor:pointer;">{{ house }}</span>
-                        <form method="post" action="/delete_house/{{ house }}" class="inline-form" onsubmit="return deleteHouse(event, '{{ house }}')">
-                            <button type="submit" class="btn btn-danger">Delete</button>
-                        </form>
-                    </li>
-                {% endfor %}
-            </ul>
+
+        <div class="column right">
+            <iframe class="geoe" src="https://lookerstudio.google.com/embed/reporting/2352844e-2c44-4e32-91c4-26b8c44398bd/page/tEnnC" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+
         </div>
+
+
+    </div>
+
+
+        
     {% endif %}
 
     <div class="house-data">
@@ -81,7 +101,7 @@
                     </thead>
                     <tbody id="dataBody">
                         {% for measurement in measurements %}
-                            <tr>
+                            <tr class="data-table-row">
                                 <td>{{ measurement.id }}</td>
                                 <td>{{ measurement.temperature }}</td>
                                 <td>{{ measurement.humidity }}</td>
@@ -96,7 +116,8 @@
                 </table>
             </div>
             
-            <h3 class="chart-title">Temperature and Humidity Over Time</h3>
+            
+            <h1 class="data-title">Temperature and Humidity Over Time</h1>
             <div id="chart"></div>
         {% else %}
             <p class="no-data">No data available for the selected house.</p>
@@ -104,7 +125,6 @@
     </div>
 </div>
 
-<iframe width="600" height="450" src="https://lookerstudio.google.com/embed/reporting/2352844e-2c44-4e32-91c4-26b8c44398bd/page/tEnnC" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 <script>
@@ -189,36 +209,46 @@
         const humidities = measurements.map(m => m.humidity);
 
         const data = [
-            {
-                x: labels,
-                y: temperatures,
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: 'Temperature',
-                line: { color: 'rgb(255, 99, 132)' },
-            },
-            {
-                x: labels,
-                y: humidities,
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: 'Humidity',
-                line: { color: 'rgb(54, 162, 235)' },
-            }
-        ];
+    {
+        x: labels,
+        y: temperatures,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Temperature',
+        line: { color: 'rgb(255, 99, 132)' },
+        marker: { size: 12, color: '#910a0a' } // Change marker size and color
+    },
+    {
+        x: labels,
+        y: humidities,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Humidity',
+        line: { color: 'rgb(54, 162, 235)' },
+        marker: { size: 12, color: '#20027a' } // Change marker size and color
+    }
+];
 
-        const layout = {
-            title: 'Temperature and Humidity Over Time',
-            xaxis: {
-                title: 'Time',
-                type: 'date',
-            },
-            yaxis: {
-                title: 'Value',
-            },
-        };
+const layout = {
+    title: {
+        text: 'Temperature and Humidity Over Time',
+        font: { size: 24, color: 'white' } // Change title size and color
+    },
+    xaxis: {
+        title: 'Time',
+        type: 'date',
+        titlefont: { size: 20, color: 'black' } // Change x-axis title size and color
+    },
+    yaxis: {
+        title: 'Value',
+        titlefont: { size: 20, color: 'black' } // Change y-axis title size and color
+    },
+    plot_bgcolor: '#bfc8d2', // Change plot background color
+    paper_bgcolor: '	#8692a0' // Change paper background color
+};
 
-        Plotly.newPlot('chart', data, layout);
+Plotly.newPlot('chart', data, layout);
+
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
