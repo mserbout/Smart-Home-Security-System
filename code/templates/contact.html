@@ -1,8 +1,33 @@
 {% extends 'base.html' %}
 
-{% block title %}Contact - My Website{% endblock %}
+{% block title %}Contact Us - Smart Home Security System{% endblock %}
 
 {% block content %}
-<h1>Welcome to the Contact Page</h1>
-<p>This is the Contact page content.</p>
+<div class="home-container">
+
+<div class="container">
+    <header class="header-contact" >
+        <h1 class="title-contact" >Contact Us</h1>
+    </header>
+    <section class="contact-form">
+        <h2 class="title-h2" >Get in Touch</h2>
+        <form action="{{ url_for('contact') }}" method="post">
+            <label class="label-contact" for="name">Name:</label>
+            <input class="input-contact" type="text" id="name" name="name" required>
+
+            <label class="label-contact" for="email">Email:</label>
+            <input class="input-contact" type="email" id="email" name="email" required>
+
+            <label class="label-contact" for="message">Message:</label>
+            <textarea id="message" name="message" rows="5" required></textarea>
+
+            <button class="btn-contact" type="submit">Send Message</button>
+        </form>
+    </section>
+    <footer>
+        <p class="p-parag" >&copy; 2024 Smart Home Security System. All rights reserved.</p>
+    </footer>
+</div>
+</div>
+
 {% endblock %}

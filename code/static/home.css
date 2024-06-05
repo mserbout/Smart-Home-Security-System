@@ -195,7 +195,10 @@ align-items: center;
 
 .limit-temp-hum {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    flex-direction: row;
+    justify-content: space-evenly;
 }
 .limit-field {
     margin-bottom: 10px;
@@ -236,3 +239,6 @@ align-items: center;
     color: #15202d;
   }
 
+  .statts{
+    margin-bottom: 13px;
+  }

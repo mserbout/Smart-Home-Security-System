@@ -4,91 +4,86 @@
 
 {% block content %}
 
-<div class="home-container" >
-    
-    ddferfe
-    </div>
+<div class="home-container">
+    <div class="historical-data-container">
+        <h1 class="title">Historical Data for {{ selected_house }}</h1>
 
-
-    
-<div class="historical-data-container">
-    <h1 class="title">Historical Data for {{ selected_house }}</h1>
-    
-    {% if is_admin %}
-        <form method="get" action="/historical_data" id="house-select-form">
-            <label for="house_name" class="control-label">Select House:</label>
-            <select name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
-                <option value="" disabled selected>Select a house</option>
-                {% for house in houses %}
-                    <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
-                {% endfor %}
-            </select>
-        </form>
-    {% else %}
-        <p>House: {{ selected_house }}</p>
-    {% endif %}
-    
-    <label for="time_range" class="control-label">Select Time Range:</label>
-    <select id="time_range" class="select-time-range" onchange="updateCharts()">
-        <option value="hourly" {% if time_range == 'hourly' %}selected{% endif %}>Hourly</option>
-        <option value="daily" {% if time_range == 'daily' %}selected{% endif %}>Daily</option>
-        <option value="weekly" {% if time_range == 'weekly' %}selected{% endif %}>Weekly</option>
-        <option value="monthly" {% if time_range == 'monthly' %}selected{% endif %}>Monthly</option>
-        <option value="yearly" {% if time_range == 'yearly' %}selected{% endif %}>Yearly</option>
-    </select>
-
-    <div id="statistics" class="statistics">
-        <h3>Statistical Information</h3>
-        <p id="avg_temp">Average Temperature: N/A</p>
-        <p id="max_humidity">Highest Humidity Level: N/A</p>
-        <p id="motion_freq">Frequency of Motion Events: N/A</p>
-        <p id="min_temp">Minimum Temperature: N/A</p>
-        <p id="max_temp">Maximum Temperature: N/A</p>
-        <p id="min_humidity">Lowest Humidity Level: N/A</p>
-    </div>
-    
-    {% if measurements1 %}
-        <h3 class="chart-title">Temperature and Humidity Over Time</h3>
-        <div id="chart"></div>
-        
-        <h3 class="chart-title">Motion Events Over Time</h3>
-        <div id="motion_chart"></div>
-        
-        <div class="table-container">
-            <table class="data-table" id="dataTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Temperature</th>
-                        <th>Humidity</th>
-                        <th>Alarm Status</th>
-                        <th>Number Detection</th>
-                        <th>Longitude</th>
-                        <th>Latitude</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="dataBody">
-                    {% for measurement in measurements1 %}
-                        <tr>
-                            <td>{{ measurement.id }}</td>
-                            <td>{{ measurement.temperature }}</td>
-                            <td>{{ measurement.humidity }}</td>
-                            <td>{{ 'Active' if measurement.alarm_status else 'Inactive' }}</td>
-                            <td>{{ measurement.number_detection }}</td>
-                            <td>{{ measurement.longitude }}</td>
-                            <td>{{ measurement.latitude }}</td>
-                            <td>{{ measurement.time }}</td>
-                        </tr>
+        {% if is_admin %}
+            <form method="get" action="/historical_data" id="house-select-form">
+                <label for="house_name" class="control-label">Select House:</label>
+                <select name="house_name" id="house_name" class="select-house" onchange="selectHouse()">
+                    <option value="" disabled selected>Select a house</option>
+                    {% for house in houses %}
+                        <option value="{{ house }}" {% if house == selected_house %}selected{% endif %}>{{ house }}</option>
                     {% endfor %}
-                </tbody>
-            </table>
+                </select>
+            </form>
+        {% else %}
+            <p>House: {{ selected_house }}</p>
+        {% endif %}
+
+        <label for="time_range" class="control-label">Select Time Range:</label>
+        <select id="time_range" class="select-time-range" onchange="updateCharts()">
+            <option value="hourly" {% if time_range == 'hourly' %}selected{% endif %}>Hourly</option>
+            <option value="daily" {% if time_range == 'daily' %}selected{% endif %}>Daily</option>
+            <option value="weekly" {% if time_range == 'weekly' %}selected{% endif %}>Weekly</option>
+            <option value="monthly" {% if time_range == 'monthly' %}selected{% endif %}>Monthly</option>
+            <option value="yearly" {% if time_range == 'yearly' %}selected{% endif %}>Yearly</option>
+        </select>
+
+        <div id="statistics" class="statistics">
+            <h3 class="title_stat">Statistical Information</h3>
+            <p id="avg_temp" class="info_stat">Average Temperature: N/A</p>
+            <p id="max_humidity" class="info_stat">Highest Humidity Level: N/A</p>
+            <p id="motion_freq" class="info_stat">Frequency of Motion Events: N/A</p>
+            <p id="min_temp" class="info_stat">Minimum Temperature: N/A</p>
+            <p id="max_temp" class="info_stat">Maximum Temperature: N/A</p>
+            <p id="min_humidity" class="info_stat">Lowest Humidity Level: N/A</p>
         </div>
 
-        <button onclick="downloadCSV()">Download Data as CSV</button>
-    {% else %}
-        <p class="no-data">No data available for the selected house.</p>
-    {% endif %}
+        {% if measurements1 %}
+            <h3 class="chart-title data-title-stat">Temperature and Humidity Over Time</h3>
+            <div id="chart"></div>
+
+            <h3 class="chart-title">Motion Events Over Time</h3>
+            <div id="motion_chart"></div>
+
+            <div class="table-container">
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                            <th>Alarm Status</th>
+                            <th>Number Detection</th>
+                            <th>Longitude</th>
+                            <th>Latitude</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataBody">
+                        {% for measurement in measurements1 %}
+                            <tr>
+                                <td>{{ measurement.id }}</td>
+                                <td>{{ measurement.temperature }}</td>
+                                <td>{{ measurement.humidity }}</td>
+                                <td>{{ 'Active' if measurement.alarm_status else 'Inactive' }}</td>
+                                <td>{{ measurement.number_detection }}</td>
+                                <td>{{ measurement.longitude }}</td>
+                                <td>{{ measurement.latitude }}</td>
+                                <td>{{ measurement.time }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="modern-button" onclick="downloadCSV()">Download Data as CSV</button>
+        {% else %}
+            <p class="no-data">No data available for the selected house.</p>
+        {% endif %}
+    </div>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -118,7 +113,7 @@
             if (!groupedData[key]) {
                 groupedData[key] = { temperatures: [], humidities: [], motionEvents: 0 };
             }
-            
+
             groupedData[key].temperatures.push(measurement.avg_temperature);
             console.log(measurement.avg_temperature)
             groupedData[key].humidities.push(measurement.avg_humidity);
@@ -141,6 +136,7 @@
         const data = await response.json();
         return data;
     }
+
     async function fetchMeasurementsPlots(houseName) {
         const response_plot = await fetch(`/measurements_plots/${houseName}`);
         const data_plot = await response_plot.json();
@@ -172,12 +168,38 @@
     }
 
     function displayStatistics(stats) {
-        document.getElementById('avg_temp').innerText = `Average Temperature: ${stats.avgTemp} °C`;
-        document.getElementById('max_humidity').innerText = `Highest Humidity Level: ${stats.maxHumidity} %`;
-        document.getElementById('motion_freq').innerText = `Frequency of Motion Events: ${stats.motionFreq}`;
-        document.getElementById('min_temp').innerText = `Minimum Temperature: ${stats.minTemp} °C`;
-        document.getElementById('max_temp').innerText = `Maximum Temperature: ${stats.maxTemp} °C`;
-        document.getElementById('min_humidity').innerText = `Lowest Humidity Level: ${stats.minHumidity} %`;
+        let avgTempElement = document.getElementById('avg_temp');
+        let maxHumidityElement = document.getElementById('max_humidity');
+        let motionFreqElement = document.getElementById('motion_freq');
+        let minTempElement = document.getElementById('min_temp');
+        let maxTempElement = document.getElementById('max_temp');
+        let minHumidityElement = document.getElementById('min_humidity');
+
+        let createColoredSpan = (text) => {
+            let spanElement = document.createElement('span');
+            spanElement.innerText = text;
+            spanElement.style.color = 'red';
+            return spanElement;
+        }
+
+        avgTempElement.innerText = 'Average Temperature: ';
+        avgTempElement.appendChild(createColoredSpan(`${stats.avgTemp} °C`));
+
+        maxHumidityElement.innerText = 'Highest Humidity Level: ';
+        maxHumidityElement.appendChild(createColoredSpan(`${stats.maxHumidity} %`));
+
+        motionFreqElement.innerText = 'Frequency of Motion Events: ';
+        motionFreqElement.appendChild(createColoredSpan(`${stats.motionFreq}`));
+
+        minTempElement.innerText = 'Minimum Temperature: ';
+        minTempElement.appendChild(createColoredSpan(`${stats.minTemp} °C`));
+
+        maxTempElement.innerText = 'Maximum Temperature: ';
+        maxTempElement.appendChild(createColoredSpan(`${stats.maxTemp} °C`));
+
+        minHumidityElement.innerText = 'Lowest Humidity Level: ';
+        minHumidityElement.appendChild(createColoredSpan(`${stats.minHumidity} %`));
+
     }
 
     async function renderCharts() {
@@ -199,8 +221,8 @@
         const temperatures = aggregatedData.map(m => m.temperature);
         const humidities = aggregatedData.map(m => m.humidity);
         const motionEvents = aggregatedData.map(m => m.motionEvents);
-       console.log(aggregatedData)
-       
+        console.log(aggregatedData)
+
         const tempHumidityData = [
             {
                 x: labels,
@@ -209,6 +231,7 @@
                 mode: 'lines+markers',
                 name: 'Temperature',
                 line: { color: 'rgb(255, 99, 132)' },
+                marker: { size: 12, color: '#910a0a' } // Change marker size and color
             },
             {
                 x: labels,
@@ -217,6 +240,7 @@
                 mode: 'lines+markers',
                 name: 'Humidity',
                 line: { color: 'rgb(54, 162, 235)' },
+                marker: { size: 12, color: '#20027a' } // Change marker size and color
             },
         ];
 
@@ -226,12 +250,30 @@
                 y: motionEvents,
                 type: 'bar',
                 name: 'Motion Events',
-                marker: { color: 'rgb(75, 192, 192)' },
+                marker: { color: 'rgb(75, 192, 192)', size: 12 } // Change marker size and color
             },
         ];
 
-        Plotly.newPlot('chart', tempHumidityData, { title: `Temperature and Humidity (${timeRange})` });
-        Plotly.newPlot('motion_chart', motionData, { title: `Motion Events (${timeRange})` });
+        const layout = {
+            title: {
+                text: `Temperature and Humidity (${timeRange})`,
+                font: { size: 24, color: 'white' } // Change title size and color
+            },
+            xaxis: {
+                title: 'Time',
+                type: 'date',
+                titlefont: { size: 20, color: 'black' } // Change x-axis title size and color
+            },
+            yaxis: {
+                title: 'Value',
+                titlefont: { size: 20, color: 'black' } // Change y-axis title size and color
+            },
+            plot_bgcolor: '#bfc8d2', // Change plot background color
+            paper_bgcolor: '#8692a0' // Change paper background color
+        };
+
+        Plotly.newPlot('chart', tempHumidityData, layout);
+        Plotly.newPlot('motion_chart', motionData, layout);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -243,13 +285,13 @@
     }
 
     function downloadCSV() {
-        const measurements = {{ measurements|tojson }};
-        const csvContent = "data:text/csv;charset=utf-8," + 
+        const measurements = {{ measurements1|tojson }};
+        const csvContent = "data:text/csv;charset=utf-8," +
             ["ID,Temperature,Humidity,Alarm Status,Number Detection,Longitude,Latitude,Time"]
-            .concat(measurements.map(m => 
+            .concat(measurements.map(m =>
                 `${m.id},${m.temperature},${m.humidity},${m.alarm_status ? 'Active' : 'Inactive'},${m.number_detection},${m.longitude},${m.latitude},${m.time}`
             )).join("\n");
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);

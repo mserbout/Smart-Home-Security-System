@@ -3,6 +3,29 @@
 {% block title %}About - My Website{% endblock %}
 
 {% block content %}
-<h1>Welcome to the About Page</h1>
-<p>This is the About page content.</p>
+<div class="home-container">
+    <div class="container">
+        <header class="header-contact" >
+            <h1 class="title-contact" >About Us</h1>
+        </header>
+        <section class="about-content">
+            <h2 class="title-h2" >Our Mission</h2>
+            <p class="p-parag">To provide a secure and intelligent home environment through innovative technology and design.</p>
+
+            <h2 class="title-h2" >Our Vision</h2>
+            <p class="p-parag">We aim to be leaders in home security solutions, offering peace of mind and advanced monitoring capabilities to homeowners worldwide.</p>
+
+            <h2 class="title-h2" >Our Team</h2>
+            <p class="p-parag">We are a team of dedicated professionals passionate about technology and security. Our expertise ranges from hardware design to software development, ensuring a comprehensive solution for your home security needs.</p>
+
+            <h2 class="title-h2" >Contact Information</h2>
+            <p class="p-parag">If you have any questions or need support, feel free to <a href="{{ url_for('contact') }}">contact us</a>.</p>
+        </section>
+        <footer>
+            <p class="p-parag">&copy; 2024 Smart Home Security System. All rights reserved.</p>
+        </footer>
+    </div>
+
+
+</div>
 {% endblock %}
