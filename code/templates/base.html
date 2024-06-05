@@ -10,33 +10,29 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='users.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='contact.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='historical_data.css') }}">
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-    <style>
-        
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <span class ="bbb" >  
-    <button class="toggle-btn" id="open-btn" onclick="toggleNav()"><i class="fas fa-bars"></i></button>
-    <button class="toggle-btn" id="close-btn" onclick="toggleNav()" style="display: none;"><i class="fas fa-times"></i></button>
+    <div class="navbar-container">
+        <button class="toggle-btn" id="open-btn" onclick="toggleNav()"><i class="fas fa-bars"></i></button>
+        <button class="toggle-btn" id="close-btn" onclick="toggleNav()" style="display: none;"><i class="fas fa-times"></i></button>
         <div class="navbar" id="navbar">
-        <a href="/" class="nav-item"><i class="fas fa-home"></i> Home</a>
-        <a href="/about" class="nav-item"><i class="fas fa-info-circle"></i> About</a>
-        <a href="/contact" class="nav-item"><i class="fas fa-envelope"></i> Contact</a>
-        {% if session.get('user_id') %}
-            {% if session.get('is_admin') %}
-                <a href="{{ url_for('manage_users') }}" class="nav-item"><i class="fas fa-users-cog"></i> Manage Users</a>
+            <a href="/" class="nav-item"><i class="fas fa-home"></i> Home</a>
+            <a href="/about" class="nav-item"><i class="fas fa-info-circle"></i> About</a>
+            <a href="/contact" class="nav-item"><i class="fas fa-envelope"></i> Contact</a>
+            {% if session.get('user_id') %}
+                {% if session.get('is_admin') %}
+                    <a href="{{ url_for('manage_users') }}" class="nav-item"><i class="fas fa-users-cog"></i> Manage Users</a>
+                {% endif %}
+                <a href="{{ url_for('historical_data') }}" class="nav-item"><i class="fas fa-chart-line"></i> Historical Data</a>
+                <span class="welcome-message">Welcome, {{ session.get('username') }}!</span>
+                <a href="{{ url_for('logout') }}" class="nav-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="nav-item"><i class="fas fa-sign-in-alt"></i> Login</a>
             {% endif %}
-            <span class="welcome-message">Welcome, {{ session.get('username') }}!</span>
-            <a href="{{ url_for('logout') }}" class="nav-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
-            <a href="{{ url_for('historical_data') }}">Historical Data Analysis</a>
-        {% else %}
-            <a href="{{ url_for('login') }}" class="nav-item"><i class="fas fa-sign-in-alt"></i> Login</a>
-        {% endif %}
+        </div>
     </div>
     <div class="content" id="content">
         {% block content %}{% endblock %}
@@ -55,21 +51,6 @@
     </div>
 
     <script>
-        function toggleNav() {
-            var navbar = document.getElementById("navbar");
-            var content = document.getElementById("content");
-            navbar.classList.toggle("active");
-            content.classList.toggle("shifted");
-        }
-
-        document.addEventListener("DOMContentLoaded", function() {
-            const flashes = document.querySelectorAll('.flashes li');
-            flashes.forEach(function(flash) {
-                alert(flash.textContent);
-            });
-        });
-
-
         function toggleNav() {
             var navbar = document.getElementById("navbar");
             var content = document.getElementById("content");
@@ -94,12 +75,14 @@
                     toggleNav();
                 }
             });
-            
         }
 
-        
-        
+        document.addEventListener("DOMContentLoaded", function() {
+            const flashes = document.querySelectorAll('.flashes li');
+            flashes.forEach(function(flash) {
+                alert(flash.textContent);
+            });
+        });
     </script>
-</span>
 </body>
 </html>
