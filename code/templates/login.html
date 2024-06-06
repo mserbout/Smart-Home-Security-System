@@ -3,10 +3,19 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<h1>Login</h1>
-<form method="POST" action="{{ url_for('login') }}">
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-</form>
+<div class="home-container">
+    <header class="header-contact" >
+        <h1 class="title-contact" >Login</h1>
+    </header>
+
+    <form class="bbbb" method="POST" action="{{ url_for('login') }}">
+        <input class="input-contact www" type="text" name="username" placeholder="Username" required>
+        <input class="input-contact www"  type="password" name="password" placeholder="Password" required>
+        <button  class="btn-contact"  type="submit">Login</button>
+    </form>
+    
+
+
+
+</div>
 {% endblock %}

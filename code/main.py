@@ -122,6 +122,10 @@ def home():
     
     tables = bigquery_client.list_tables(dataset_id)
     houses = [table.table_id.split('.')[-1] for table in tables]
+    
+    # Filter out the 'users' and 'coordinates' tables
+    houses = [house for house in houses if house not in ['users', 'coordinates']]
+
 
     return render_template('home.html', measurements=measurements, houses=houses, is_admin=is_admin, selected_house=selected_house, idHouse=idHouse)
 
@@ -356,7 +360,9 @@ def historical_data():
     # Admin sees all houses, user sees only their house
     tables = bigquery_client.list_tables(dataset_id)
     houses = [table.table_id.split('.')[-1] for table in tables] if is_admin else [idHouse]
-
+    
+    # Filter out the 'users' and 'coordinates' tables
+    houses = [house for house in houses if house not in ['users', 'coordinates']]
     return render_template('historical_data.html', measurements=measurements, measurements1=measurements1, houses=houses, is_admin=is_admin, selected_house=selected_house, time_range=time_range)
     
     # Admin sees all houses, user sees only their house
@@ -402,8 +408,6 @@ def get_historical_measurements(house_name):
         return jsonify(measurements)
     except Exception as e:
         return jsonify({'error': str(e)})
-
-# Rest of your code...
 
 
 if __name__ == '__main__':

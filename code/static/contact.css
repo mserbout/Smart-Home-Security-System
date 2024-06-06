@@ -35,7 +35,7 @@
     font-weight: bold;
 }
 
-.input-contact[type="text"], .input-contact[type="email"], textarea {
+.input-contact[type="text"], .input-contact[type="email"], .input-contact[type="password"], textarea {
     width: 100%;
     padding: 10px;
     margin-bottom: 15px;
@@ -69,4 +69,14 @@ footer .p-parag {
     margin: 0;
     font-size: 0.9em;
     color: #777;
+}
+
+.www{
+    width: 50%;
+
+}
+.bbbb{
+    width:50%;
+    margin-right: auto;
+    margin-left: auto;
 }
